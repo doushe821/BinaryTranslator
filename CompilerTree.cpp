@@ -1,0 +1,252 @@
+#include "CompilerTree.h"
+
+#include <assert.h>
+
+static void PrintDescendants(const void* Node, FILE* Out);
+
+void* NewNode(const void* Tree, const size_t Type, const size_t DataSize, const void* Value, const size_t Degree, ...)
+{
+    assert(Tree);
+
+    void* NewNode = calloc(1, ATL_BASE_NODE_SIZE + DataSize + Degree * sizeof(void*));
+
+    size_t BytesFilled = 0;
+
+    memcpy((char*)NewNode, Tree, sizeof(void*));
+    BytesFilled += sizeof(Tree);
+
+    memcpy((char*)NewNode + BytesFilled, &Type, sizeof(Type));
+    BytesFilled += sizeof(Type);
+
+    memcpy((char*)NewNode + BytesFilled, &DataSize, sizeof(DataSize));
+    BytesFilled += sizeof(DataSize);
+
+    if(Value == NULL)
+    {
+        memset((char*)NewNode + BytesFilled, 0, DataSize);
+        BytesFilled += DataSize;
+    }
+    else
+    {
+        memcpy((char*)NewNode + BytesFilled, Value, DataSize);
+        BytesFilled += DataSize;
+    }
+
+    memcpy((char*)NewNode + BytesFilled, &Degree, sizeof(Degree));
+    BytesFilled += sizeof(Degree);
+
+    va_list Descendants;
+    va_start(Descendants, Degree);
+    for(size_t i = 0; i < Degree; i++)
+    {
+        void* Descendant = va_arg(Descendants, void*);
+        if(Descendant == NULL)
+        {
+            memset((char*)NewNode + BytesFilled, 0, sizeof(Descendant));
+            BytesFilled += sizeof(Descendant);
+        }
+        else
+        {
+            memcpy((char*)NewNode + BytesFilled, &Descendant, sizeof(Descendant));
+            BytesFilled += sizeof(Descendant);
+        }
+    }
+
+    return NewNode;
+}
+
+void* GetNodeData(const void* Node, const int FieldCode, const size_t DescendantNumber)
+{
+    if(Node == NULL)
+    {
+        return NULL;
+    }
+
+    if(FieldCode == DESCENDANTS_FIELD_CODE)
+    {
+        return (char*)Node + CalculateByteShift(Node, FieldCode) + sizeof(void*) * DescendantNumber;
+    }
+    return (char*)Node + CalculateByteShift(Node, FieldCode);
+}
+
+int AddDescendant(void* Node, const void* Descendant, size_t DescendantNumber)
+{
+    assert(memcpy((char*)Node + CalculateByteShift(Node, DESCENDANTS_FIELD_CODE) + sizeof(void*) * DescendantNumber, &Descendant, sizeof(void*))); // TODO remove assert on release
+    return 0;
+}
+
+int NodeDump(const void* Node, FILE* Out)
+{
+    assert(Out);
+    assert(Node);
+
+    size_t NodeType = *(size_t*)((char*)Node + CalculateByteShift(Node, TYPE_FIELD_CODE));
+
+    fprintf(Out, "\"label\" = \"{<adr> Node Address =  %p|<value> ", Node);
+
+    switch(NodeType)
+    {
+        case STATEMENT_OPERAND_NODE:
+        {
+            size_t Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "Operand = %s|Statement operand", KeyWordsArray[Value].Name);
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case SCOPE_NODE:
+        {
+            size_t Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "Number of Statements = %zu|Scope", Value);
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case FUNCTION_BODY_NODE:
+        {
+            size_t Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "Table Number = %zu|Function body", Value);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"red\"\n");
+            break;
+        }
+        case LEFT_VARIABLE_NODE:
+        {
+            size_t Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "Table Number = %zu|Left Variable", Value);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case INTEGER_VALUE_NODE:
+        {
+            int Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "%d|Integer Value", Value);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case FLOAT_VALUE_NODE:
+        {
+            double Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "%lf|Floating Point Value", Value);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case ARIPHMETICAL_SUM_NODE:
+        {
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUM].Name);
+
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case ARIPHMETICAL_SUB_NODE:
+        {
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUB].Name);
+
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case ARIPHMETICAL_MUL_NODE:
+        {
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_MUL].Name);
+
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case ARIPHMETICAL_DIV_NODE:
+        {
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_DIV].Name);
+
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case LOGICAL_AND_NODE:
+        {
+            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_AND].Name);
+
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case LOGICAL_OR_NODE:
+        {
+            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_OR].Name);
+
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case LOGICAL_XOR_NODE:
+        {
+            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_XOR].Name);
+
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case EXPRESSION_NODE:
+        {
+            fprintf(Out, "Expression|Expression"); // TODO value should be number of descendant nodes
+            PrintDescendants(Node, Out); // FIXME look up
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        case RIGHT_VARIABLE_NODE:
+        {
+            fprintf(Out, "%s|Right Variable", (char*)GetNodeData(Node, DATA_FIELD_CODE, 0));
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
+        default:
+        {
+            fprintf(Out, "Zamn, an error\n(What the sigma!?)\n");
+            break;
+        }
+    }
+
+    fprintf(Out, "shape = \"record\"];");
+    return 0;
+}
+
+static void PrintDescendants(const void* Node, FILE* Out)
+{
+    assert(Node);
+    assert(Out);
+
+    size_t Degree = 0;
+    memcpy(&Degree, GetNodeData(Node, DEGREE_FIELD_CODE, 0), sizeof(Degree));
+
+    if(Degree)
+    {
+        fprintf(Out, "|{");
+    }
+    for(size_t i = 0; i < Degree; i++)
+    {
+        char* addr = {};
+        memcpy(&addr, GetNodeData(Node, DESCENDANTS_FIELD_CODE, i), sizeof(void*));
+        if(i != Degree - 1)
+        {
+            fprintf(Out, "<d%zu>%p |", i, addr);
+        }
+        else
+        {
+            fprintf(Out, "<d%zu>%p}", i, addr);
+        }
+    }
+}
+
+
+// TODO (if needed)
+
+void* CloneTree(const void* tree, void* root)
+{
+    return (void*)((size_t)tree + (size_t)root);
+}

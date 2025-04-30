@@ -1,0 +1,11 @@
+int main()
+{
+    a = 2;
+    a = b + c;
+    a = 2;
+    a = b + c;
+    a = 2;
+    a = b + c;
+    a = 2;
+    a = b + c;
+}

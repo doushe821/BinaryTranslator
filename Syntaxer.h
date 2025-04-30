@@ -1,0 +1,8 @@
+#ifndef SYNTAXER_H_INCLUDED
+#define SYNTAXER_H_INCLUDED
+
+#include "CompilerTree.h"
+
+int GetProgram(Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+
+#endif
