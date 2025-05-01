@@ -1,0 +1,6 @@
+build
+Front
+Makefile
+*.txt
+*.pdf
+*.dot

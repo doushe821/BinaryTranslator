@@ -1,15 +1,4 @@
-int ghoul(int arg, int brg)
-{
-    int penis = 5;    
-}
-
 int main(float Big_Penis)
 {
-    int a = 2;
-    int b = 0;
-    a = b + 2;
-
-    ghoul(a, b);
-
-    a = ghoul(a, b) + b;
+    int a = -2;
 }

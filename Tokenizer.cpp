@@ -86,7 +86,7 @@ TokenTable_t* Tokenize(char* Source, size_t SourceSize)
             }
             default:
             {
-                if(isdigit(Source[i]))
+                if(isdigit(Source[i]) || ((Source[i] == '-') && (isdigit(Source[i + 1]))))
                 {
                     size_t LocalIndex = i + 1;
                     while(isdigit(Source[LocalIndex]))
