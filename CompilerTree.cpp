@@ -82,11 +82,20 @@ int NodeDump(const void* Node, FILE* Out)
     fprintf(stderr, "shit and giggle\n");
     size_t NodeType = *(size_t*)((char*)Node + CalculateByteShift(Node, TYPE_FIELD_CODE));
     fprintf(stderr, "Node type = %zu\n", NodeType);
-    
+
     fprintf(Out, "\"label\" = \"{<adr> Node Address =  %p|<value> ", Node);
 
     switch(NodeType)
     {
+        case FUNCTION_CALL_NODE:
+        {
+            int Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "Function index: %d|Function call node", Value);
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;          
+        }
         case PROGRAM_NODE:
         {
             fprintf(Out, "Program");
@@ -227,7 +236,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case RIGHT_VARIABLE_NODE:
         {
-            fprintf(Out, "%s|Right Variable", (char*)GetNodeData(Node, DATA_FIELD_CODE, 0));
+            fprintf(Out, "%d|Right Variable", *(int*)GetNodeData(Node, DATA_FIELD_CODE, 0));
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
             break;
         }

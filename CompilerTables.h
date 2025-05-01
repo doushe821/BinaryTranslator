@@ -54,6 +54,8 @@ const size_t InitalArraySize = 512;
 
 // SYNTAXER SECTION START
 
+const int NOT_FOUND = -1;
+
 enum ATLNodeTypes
 {
     INTEGER_VALUE_NODE,
@@ -74,6 +76,7 @@ enum ATLNodeTypes
     CONDITION_NODE,
     FUNCTION_ARGUMENTS_NODE,
     PROGRAM_NODE,
+    FUNCTION_CALL_NODE,
 };
 
 union VariableData_u
