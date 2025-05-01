@@ -72,6 +72,8 @@ enum ATLNodeTypes
     SCOPE_NODE,
     STATEMENT_OPERAND_NODE,
     CONDITION_NODE,
+    FUNCTION_ARGUMENTS_NODE,
+    PROGRAM_NODE,
 };
 
 union VariableData_u
@@ -86,6 +88,8 @@ struct Variable_t
     bool Assigned;
     VariableData_u Data;
     char Name[VARIABLE_NAME_MAX];
+
+    size_t ListIndex;
 };
 
 struct VariableTable_t

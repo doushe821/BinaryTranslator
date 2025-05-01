@@ -1,4 +1,4 @@
-int main()
+int main(float Big_Penis)
 {
     a = 2;
     a = b + c;
@@ -16,4 +16,9 @@ int main()
             ligma = balls;
         }
     }
+}
+
+int YAICA()
+{
+    ligma = chlen;
 }

@@ -71,7 +71,7 @@ void* GetNodeData(const void* Node, const int FieldCode, const size_t Descendant
 
 int AddDescendant(void* Node, const void* Descendant, size_t DescendantNumber)
 {
-    assert(memcpy((char*)Node + CalculateByteShift(Node, DESCENDANTS_FIELD_CODE) + sizeof(void*) * DescendantNumber, &Descendant, sizeof(void*))); // TODO remove assert on release
+    assert(memcpy((char*)Node + CalculateByteShift(Node, DESCENDANTS_FIELD_CODE) + sizeof(void*) * DescendantNumber, &Descendant, sizeof(void*))); // TODO remove assert on release FIXME please don't forget                                                                                                                       that you are a precious little gay boy
     return 0;
 }
 
@@ -79,13 +79,30 @@ int NodeDump(const void* Node, FILE* Out)
 {
     assert(Out);
     assert(Node);
-
+    fprintf(stderr, "shit and giggle\n");
     size_t NodeType = *(size_t*)((char*)Node + CalculateByteShift(Node, TYPE_FIELD_CODE));
-
+    fprintf(stderr, "Node type = %zu\n", NodeType);
+    
     fprintf(Out, "\"label\" = \"{<adr> Node Address =  %p|<value> ", Node);
 
     switch(NodeType)
     {
+        case PROGRAM_NODE:
+        {
+            fprintf(Out, "Program");
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;     
+        }
+        case FUNCTION_ARGUMENTS_NODE:
+        {
+            int Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "Number of qrguments: %zu|Function arguments", *(size_t*)GetNodeData(Node, DATA_FIELD_CODE, 0));
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;   
+        }
         case CONDITION_NODE:
         {
             int Value = 0;

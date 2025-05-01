@@ -36,7 +36,7 @@ else ifeq ($(TARGET), debug)
 endif
 
 
-SOURCES=Frontend.cpp FileBufferizer/FileBufferizer.cpp Tokenizer.cpp CompilerTree.cpp Syntaxer.cpp Tree/Tree.cpp
+SOURCES=Frontend.cpp FileBufferizer/FileBufferizer.cpp Tokenizer.cpp CompilerTree.cpp Syntaxer.cpp Tree/Tree.cpp List/List.cpp
 SOURCES_ASM=
 OBJECTS:=$(addprefix $(OUT_O_DIR)/,$(SOURCES:.cpp=.o))
 OBJECTS_ASM:=$(addprefix $(OUT_O_DIR)/,$(SOURCES_ASM:.asm=.o))

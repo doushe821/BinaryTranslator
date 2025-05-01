@@ -1,10 +1,13 @@
 #include "Syntaxer.h"
 
 #include <assert.h>
+#include "List/List.h"
 
 static void* GetType(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetVariableDeclaration(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+
 static void* GetFunctionBody(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+static void* GetFunctionBodyArguments(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 
 static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
@@ -14,7 +17,10 @@ static void* GetStatementOperand(const Tree_t* Tree, const TokenTable_t* TokenTa
 static void* GetLeftVariable(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 
 static size_t FunctionTableAppend(FunctionTable_t* FunctionTable, Function_t Function);
+
+static size_t SearchType(TokenTable_t* TokenTable, size_t* TokenIndex);
 static size_t VariableAppend(VariableTable_t* VariableTable, Variable_t Variable);
+static int VariableTableSearch(VariableTable_t* VariableTable, Variable_t Variable);
 
 static void* GetExpression(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetLogicalXor(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
@@ -38,7 +44,28 @@ int GetProgram(Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex,
     assert(VariableTable);
     assert(FunctionTable);
 
-    Tree->root = GetType(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+    const size_t InitProgramListSize = 128;
+    List_t* ProgramList = NULL;
+    ListInit(&ProgramList, InitProgramListSize, sizeof(void*), 0);
+
+    assert(ProgramList);
+
+    while(*TokenIndex < TokenTable->Free)
+    {
+        void* Branch = GetType(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+        PushFront(ProgramList, &Branch); 
+    }
+    
+    size_t ProgramListLength = GetLinearListSize(ProgramList) / ProgramList->elsize;
+    fprintf(stderr, "%zu\n", ProgramListLength);
+    Tree->root = Tree->InitNode(Tree, PROGRAM_NODE, 0, NULL, ProgramListLength);
+
+    for(size_t i = 0; i < ProgramListLength; i++)
+    {
+        AddDescendant(Tree->root, (void*)(*(size_t*)ListGetNodeValueInd(ProgramList, i + 1)), i);
+    }
+
+    ListDstr(ProgramList);
 
     return 0;
 }
@@ -69,7 +96,7 @@ static void* GetType(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t*
     }
     else
     {
-        return GetExpression(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+        assert(0);
     }
     assert(0);
     return NULL;
@@ -153,16 +180,95 @@ static void* GetFunctionBody(const Tree_t* Tree, const TokenTable_t* TokenTable,
 
         // TEMP SOLUTION
         // Now making cool solution
-        (*TokenIndex) += 3;
+        (*TokenIndex)++;
+        void* Arguments = GetFunctionBodyArguments(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+
+        assert(TokenTable->TokenArray[*TokenIndex].TokenType == PARENTHESES_CLOSE_TOKEN);
+
         // TEMP SOLUTION
+
+        (*TokenIndex)++;
         
-        return Tree->InitNode(Tree, FUNCTION_BODY_NODE, sizeof(FunctionIndex), &FunctionIndex, 1, GetScope(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable));
+        return Tree->InitNode(Tree, FUNCTION_BODY_NODE, sizeof(FunctionIndex), &FunctionIndex, 2, GetScope(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable), Arguments);
     }
     else
     {
         assert(0);
     }
 } // ADD ARGUMENTS
+
+static void* GetFunctionBodyArguments(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
+{
+    assert(Tree);
+    assert(TokenTable);
+    assert(TokenIndex);
+    assert(VariableTable);
+    assert(FunctionTable);
+
+    if(TokenTable->TokenArray[*TokenIndex].TokenType != PARENTHESES_OPEN_TOKEN)
+    {
+        assert(0);
+    }
+
+    (*TokenIndex)++;
+
+    size_t ArgumentCounter = 0;
+    for(size_t i = *TokenIndex; i < TokenTable->Free; i++) // REFACTOR if pointers are added; hopefully no one will notice that I am cute little gay boy 
+    {
+        size_t CurrentTokenType = TokenTable->TokenArray[i].TokenType;
+        if(CurrentTokenType == PARENTHESES_CLOSE_TOKEN)
+        {
+            break;
+        }
+        else if(CurrentTokenType == ARG_SEPARATOR_TOKEN)
+        {
+            ArgumentCounter++;
+        }
+    }
+
+    if(TokenTable->TokenArray[*TokenIndex].TokenType != PARENTHESES_CLOSE_TOKEN)
+    {
+        ArgumentCounter++;
+    }
+    else
+    {
+        return Tree->InitNode(Tree, FUNCTION_ARGUMENTS_NODE, sizeof(ArgumentCounter), &ArgumentCounter, ArgumentCounter);
+    }
+
+    void* Arguments = Tree->InitNode(Tree, FUNCTION_ARGUMENTS_NODE, sizeof(ArgumentCounter), &ArgumentCounter, ArgumentCounter);
+
+    for(size_t  i = 0; i < ArgumentCounter; i++) // when making stack frames, new frame should be addded precisely here, any variables from outer frames will be overshadowed by function's;
+    {
+        size_t Type = 0;
+        for(size_t j = 1; j < TYPE_SECTION_END - TYPE_SECTION_START; j++)
+        {
+            if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[TYPE_SECTION_START + j].Name, strlen(KeyWordsArray[TYPE_SECTION_START + j].Name)) == 0)
+            {
+                Type = j;
+                break;
+            }
+        }
+
+        assert(Type);
+        
+        Variable_t Argument = {};
+        Argument.Type = Type;
+
+        (*TokenIndex)++;
+
+        strncpy(Argument.Name, TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, strlen(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName));
+
+        size_t TableIndex = VariableAppend(VariableTable, Argument);
+
+        void* ArgumentNode = Tree->InitNode(Tree, LEFT_VARIABLE_NODE, sizeof(TableIndex), &TableIndex, 0);
+
+        AddDescendant(Arguments, ArgumentNode, i);
+
+        (*TokenIndex) += 2;
+    }
+    (*TokenIndex)--;
+    return Arguments;
+}
 
 static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
 {
@@ -179,8 +285,6 @@ static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t
         
         size_t StatementCounter = 0;
         ScopeStatementCount(TokenTable, *TokenIndex, &StatementCounter); // UPGRADE LATER; UPGRADED, pretty cool now;
-
-        fprintf(stderr, "%zu\n", StatementCounter);
 
         void* ScopeNode = Tree->InitNode(Tree, SCOPE_NODE, sizeof(StatementCounter), &StatementCounter, StatementCounter);
 
@@ -335,9 +439,7 @@ static void* GetConditionalCycle(const Tree_t* Tree, const TokenTable_t* TokenTa
 
     AddDescendant(ConditionNode, Condition, 1);
 
-    fprintf(stderr, "Whoopsie\n");
     AddDescendant(ConditionNode, GetScope(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable), 0);
-    fprintf(stderr, "Daisy\n");
 
     return ConditionNode;
 }
@@ -407,16 +509,36 @@ static void* GetLeftVariable(const Tree_t* Tree, const TokenTable_t* TokenTable,
     }
     else
     {
-        fprintf(stderr, "%zu\n", *TokenIndex);
-        fprintf(stderr, "%s\n",  TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName);
         assert(0); 
     }
+}
+
+static size_t SearchType(TokenTable_t* TokenTable, size_t* TokenIndex)
+{
+    assert(TokenTable);
+    assert(TokenIndex);
+
+    for(size_t i = 1; i < TYPE_SECTION_END - TYPE_SECTION_START; i++)
+    {
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[TYPE_SECTION_START + i].Name, strlen(KeyWordsArray[TYPE_SECTION_START + i].Name)) == 0)
+        {
+            return TYPE_SECTION_START + i;
+        }
+    }
+    return 0;
 }
 
 
 static size_t VariableAppend(VariableTable_t* VariableTable, Variable_t Variable)
 {
     assert(VariableTable);
+
+    int VariableIndex = VariableTableSearch(VariableTable, Variable);
+    
+    if(VariableIndex >= 0)
+    {
+        return VariableIndex;
+    }
 
     if(VariableTable->Free >= VariableTable->Capacity)
     {
@@ -429,6 +551,18 @@ static size_t VariableAppend(VariableTable_t* VariableTable, Variable_t Variable
     (VariableTable->Free)++;
 
     return VariableTable->Free - 1;
+}
+
+static int VariableTableSearch(VariableTable_t* VariableTable, Variable_t Variable)
+{
+    for(size_t i = 0; i < VariableTable->Free; i++)
+    {
+        if(strncmp(VariableTable->VariablesArray[i].Name, Variable.Name, strlen(VariableTable->VariablesArray[i].Name)) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
 }
 
 //
