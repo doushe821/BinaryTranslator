@@ -31,6 +31,8 @@ static void* GetLogicalOr(const Tree_t* Tree, const TokenTable_t* TokenTable, si
 static void* GetLogicalAnd(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetAriphmeticalSum(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+static void* GetComparisonOperand(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+static size_t SearchComparisonOperand(const TokenTable_t* TokenTable, size_t* TokenIndex);
 static void* GetExpressionBrackets(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetRightVariable(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetValue(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
@@ -309,6 +311,7 @@ static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t
     }
     else
     {
+        fprintf(stderr, "%zu\n", *TokenIndex);
         assert(0);
         return NULL;
     }
@@ -411,7 +414,6 @@ static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, si
         }
         else
         {
-            fprintf(stderr, "%zu\n%zu\n", TokenTable->TokenArray[*TokenIndex].TokenType, *TokenIndex);
             assert(0);
         }
     }
@@ -459,7 +461,6 @@ static void* GetFunctionCall(const Tree_t* Tree, const TokenTable_t* TokenTable,
             (*TokenIndex)++;
         }
     }
-    fprintf(stderr, "%zu\n", TokenTable->TokenArray[*TokenIndex].TokenType);
     (*TokenIndex)++;
     return FunctionCallNode;
 }
@@ -488,9 +489,12 @@ static void* GetConditionalCycle(const Tree_t* Tree, const TokenTable_t* TokenTa
     assert(Condition);
     assert(GetNodeData(Condition, DESCENDANTS_FIELD_CODE, 0));
 
-    (*TokenIndex)++;
-
     AddDescendant(ConditionNode, Condition, 1);
+
+    if(TokenTable->TokenArray[*TokenIndex].TokenType == PARENTHESES_CLOSE_TOKEN)
+    {
+        (*TokenIndex)++;
+    }
 
     AddDescendant(ConditionNode, GetScope(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable), 0);
 
@@ -910,7 +914,7 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
     assert(VariableTable);
     assert(FunctionTable);
 
-    void* NewNode1 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+    void* NewNode1 = GetComparisonOperand(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
     void* NewNode2 = NULL;
     void* Root = NewNode1;
 
@@ -919,7 +923,7 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
         if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_MUL_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_MUL_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
-            NewNode2 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+            NewNode2 = GetComparisonOperand(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
             size_t Type1 = *(size_t*)GetNodeData(Root, TYPE_FIELD_CODE, 0);
             size_t Type2 = *(size_t*)GetNodeData(NewNode2, TYPE_FIELD_CODE, 0);
             if(Type1 == INTEGER_VALUE_NODE && Type2 == INTEGER_VALUE_NODE)
@@ -947,7 +951,7 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
         else if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
-            NewNode2 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+            NewNode2 = GetComparisonOperand(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
             size_t Type1 = *(size_t*)GetNodeData(Root, TYPE_FIELD_CODE, 0);
             size_t Type2 = *(size_t*)GetNodeData(NewNode2, TYPE_FIELD_CODE, 0);
             if(Type1 == INTEGER_VALUE_NODE && Type2 == INTEGER_VALUE_NODE)
@@ -985,6 +989,48 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
     }
     
     return Root;
+}
+
+static void* GetComparisonOperand(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
+{
+    assert(Tree);
+    assert(TokenTable);
+    assert(TokenIndex);
+    assert(VariableTable);
+    assert(FunctionTable);
+
+    void* NewNode1 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+    void* Root = NewNode1;
+    void* NewNode2 = NULL;
+
+    size_t KeyWordIndex = SearchComparisonOperand(TokenTable, TokenIndex);
+    while(KeyWordIndex != 0)
+    {
+        (*TokenIndex)++;
+        (*TokenIndex)++;
+        NewNode2 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+
+        Root = Tree->InitNode(Tree, COMPARISON_OPERAND_NODE, sizeof(KeyWordIndex), &KeyWordIndex, 2, Root, NewNode2);
+
+        KeyWordIndex = SearchComparisonOperand(TokenTable, TokenIndex);
+    }
+    return Root;
+}
+
+static size_t SearchComparisonOperand(const TokenTable_t* TokenTable, size_t* TokenIndex)
+{
+    assert(TokenTable);
+    assert(TokenIndex);
+
+    for(size_t i = 1; i < COMPARISON_OPERANDS_SECTION_END - COMPARISON_OPERANDS_SECTION_START; i++)
+    {
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[COMPARISON_OPERANDS_SECTION_START + i].Name, strlen(KeyWordsArray[COMPARISON_OPERANDS_SECTION_START + i].Name)) == 0)
+        {
+            return COMPARISON_OPERANDS_SECTION_START + i;
+        }
+    }
+
+    return 0;
 }
 
 static void* GetExpressionBrackets(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
@@ -1039,6 +1085,7 @@ static void* GetRightVariable(const Tree_t* Tree, const TokenTable_t* TokenTable
         if(VariableTableIndex == NOT_FOUND)
         {
             fprintf(stderr, "Heretic! Tried to use an undefined variable! Get crucified!\n");
+            fprintf(stderr, "Token number = %zu\n", *TokenIndex);
             assert(0);
         }
 

@@ -77,6 +77,7 @@ enum ATLNodeTypes
     FUNCTION_ARGUMENTS_NODE,
     PROGRAM_NODE,
     FUNCTION_CALL_NODE,
+    COMPARISON_OPERAND_NODE,
 };
 
 union VariableData_u

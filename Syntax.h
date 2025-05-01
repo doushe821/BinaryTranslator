@@ -52,8 +52,14 @@ enum KeyWordsTableIndexes // TODO Remove assignments later
     FOR_INDEX,
     CONDITIONAL_CYCLES_SECTION_END,
 
+    COMPARISON_OPERANDS_SECTION_START,
     EQUALITY_INDEX,
-    
+    LESS_INDEX,
+    MORE_INDEX,
+    LESS_OR_EQUAL_INDEX,
+    MORE_OR_EQUAL_INDEX,
+    NOT_EQUAL_INDEX,
+    COMPARISON_OPERANDS_SECTION_END,
 };
 
 struct KeyWord
@@ -64,41 +70,44 @@ struct KeyWord
 
 __attribute((unused)) static KeyWord KeyWordsArray[NumberOfKeyWords] = 
 {
-    {";"        , STATEMENT_SEPARATOR_CODE        },
-    {","        , ARG_SEPARATOR_CODE              },
+    {";"        , STATEMENT_SEPARATOR_CODE          },
+    {","        , ARG_SEPARATOR_CODE                },
 
-    {""         , STATEMENT_OPERAND_SECTION_START },
-    {"="        , ASSIGNMENT_CODE                 },
-    {""         , STATEMENT_OPERAND_SECTION_END   },
+    {""         , STATEMENT_OPERAND_SECTION_START   },
+    {"="        , ASSIGNMENT_CODE                   },
+    {""         , STATEMENT_OPERAND_SECTION_END     },
 
-    {"("        , PARENTHESES_OPEN_CODE           },
-    {")"        , PARENTHESES_CLOSE_CODE          },
-    {"{"        , CURLY_OPEN_CODE                 },
-    {"}"        , CURLY_CLOSE_CODE                },
-    {"+"        , NO_CODE                         },
-    {"-"        , NO_CODE                         },
-    {"*"        , NO_CODE                         },
-    {"/"        , NO_CODE                         },
-    {"&"        , NO_CODE                         },
-    {"|"        , NO_CODE                         },
-    {"^"        , NO_CODE                         },
+    {"("        , PARENTHESES_OPEN_CODE             },
+    {")"        , PARENTHESES_CLOSE_CODE            },
+    {"{"        , CURLY_OPEN_CODE                   },
+    {"}"        , CURLY_CLOSE_CODE                  },
+    {"+"        , NO_CODE                           },
+    {"-"        , NO_CODE                           },
+    {"*"        , NO_CODE                           },
+    {"/"        , NO_CODE                           },
+    {"&"        , NO_CODE                           },
+    {"|"        , NO_CODE                           },
+    {"^"        , NO_CODE                           },
 
-    {""         , TYPE_SECTION_START              },
-    {"int"      , NO_CODE                         },
-    {"float"    , NO_CODE                         },
-    {""         , TYPE_SECTION_END                },
+    {""         , TYPE_SECTION_START                },
+    {"int"      , NO_CODE                           },
+    {"float"    , NO_CODE                           },
+    {""         , TYPE_SECTION_END                  },
 
-    {""         , CONDITIONAL_CYCLES_SECTION_START},
-    {"if"       , NO_CODE                         },
-    {"while"    , NO_CODE                         },
-    {"for"      , NO_CODE                         },
-    {""         , CONDITIONAL_CYCLES_SECTION_END  },
-
-    {"<"        , NO_CODE},
-    {">"        , NO_CODE},
-    {"<="       , NO_CODE},
-    {">="       , NO_CODE},
-    {}
+    {""         , CONDITIONAL_CYCLES_SECTION_START  },
+    {"if"       , NO_CODE                           },
+    {"while"    , NO_CODE                           },
+    {"for"      , NO_CODE                           },
+    {""         , CONDITIONAL_CYCLES_SECTION_END    },
+ 
+    {""         , COMPARISON_OPERANDS_SECTION_START },
+    {"=="       , NO_CODE                           },
+    {"<"        , NO_CODE                           },
+    {">"        , NO_CODE                           },
+    {"<="       , NO_CODE                           },
+    {">="       , NO_CODE                           },
+    {"!="       , NO_CODE                           },
+    {""         , COMPARISON_OPERANDS_SECTION_END   },
 
 };
 
