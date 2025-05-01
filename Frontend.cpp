@@ -15,7 +15,6 @@ int main()
 
     TokenTable_t* TokenTable = Tokenize(Buffer, TokenTableSize);
 
-    fprintf(stderr, "%p\n", TokenTable);
     Tree_t Tree =
     {
         NewNode,

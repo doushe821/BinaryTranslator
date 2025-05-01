@@ -71,6 +71,7 @@ enum ATLNodeTypes
     FUNCTION_BODY_NODE,
     SCOPE_NODE,
     STATEMENT_OPERAND_NODE,
+    CONDITION_NODE,
 };
 
 union VariableData_u

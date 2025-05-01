@@ -11,21 +11,21 @@ style = filled
 
 "node0" [
 rank = 0
-"label" = "{<adr> Node Address =  0x504000000810|<value> Table Number = 0|Function body}"
+"label" = "{<adr> Node Address =  0x504000000b10|<value> Table Number = 0|Function body}"
 color="black"
 fillcolor="red"
 shape = "record"];node0: <d0> -> node1[color = "blue"];
 
 "node1" [
 rank = 1
-"label" = "{<adr> Node Address =  0x50b000000040|<value> Number of Statements = 8|Scope|{<d0>0x506000000020 |<d1>0x506000000080 |<d2>0x5060000000e0 |<d3>0x506000000140 |<d4>0x5060000001a0 |<d5>0x506000000200 |<d6>0x506000000260 |<d7>0x5060000002c0}}"
+"label" = "{<adr> Node Address =  0x508000000020|<value> Number of Statements = 7|Scope|{<d0>0x506000000020 |<d1>0x506000000080 |<d2>0x5060000000e0 |<d3>0x506000000140 |<d4>0x5060000001a0 |<d5>0x506000000200 |<d6>0x506000000260}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node1: <d0> -> node2[color = "blue"];
 
 "node2" [
 rank = 2
-"label" = "{<adr> Node Address =  0x506000000020|<value> Operand = =|Statement operand|{<d0>0x504000000010 |<d1>0x504000000090}}"
+"label" = "{<adr> Node Address =  0x506000000020|<value> \"=\"|Statement operand|{<d0>0x504000000010 |<d1>0x504000000090}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node2: <d0> -> node3[color = "blue"];
@@ -53,7 +53,7 @@ shape = "record"];node1: <d1> -> node6[color = "blue"];
 
 "node6" [
 rank = 3
-"label" = "{<adr> Node Address =  0x506000000080|<value> Operand = =|Statement operand|{<d0>0x5040000000d0 |<d1>0x5040000001d0}}"
+"label" = "{<adr> Node Address =  0x506000000080|<value> \"=\"|Statement operand|{<d0>0x5040000000d0 |<d1>0x5040000001d0}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node6: <d0> -> node7[color = "blue"];
@@ -95,7 +95,7 @@ shape = "record"];node1: <d2> -> node12[color = "blue"];
 
 "node12" [
 rank = 4
-"label" = "{<adr> Node Address =  0x5060000000e0|<value> Operand = =|Statement operand|{<d0>0x504000000210 |<d1>0x504000000290}}"
+"label" = "{<adr> Node Address =  0x5060000000e0|<value> \"=\"|Statement operand|{<d0>0x504000000210 |<d1>0x504000000290}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node12: <d0> -> node13[color = "blue"];
@@ -123,7 +123,7 @@ shape = "record"];node1: <d3> -> node16[color = "blue"];
 
 "node16" [
 rank = 5
-"label" = "{<adr> Node Address =  0x506000000140|<value> Operand = =|Statement operand|{<d0>0x5040000002d0 |<d1>0x5040000003d0}}"
+"label" = "{<adr> Node Address =  0x506000000140|<value> \"=\"|Statement operand|{<d0>0x5040000002d0 |<d1>0x5040000003d0}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node16: <d0> -> node17[color = "blue"];
@@ -165,7 +165,7 @@ shape = "record"];node1: <d4> -> node22[color = "blue"];
 
 "node22" [
 rank = 6
-"label" = "{<adr> Node Address =  0x5060000001a0|<value> Operand = =|Statement operand|{<d0>0x504000000410 |<d1>0x504000000490}}"
+"label" = "{<adr> Node Address =  0x5060000001a0|<value> \"=\"|Statement operand|{<d0>0x504000000410 |<d1>0x504000000490}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node22: <d0> -> node23[color = "blue"];
@@ -193,7 +193,7 @@ shape = "record"];node1: <d5> -> node26[color = "blue"];
 
 "node26" [
 rank = 7
-"label" = "{<adr> Node Address =  0x506000000200|<value> Operand = =|Statement operand|{<d0>0x5040000004d0 |<d1>0x5040000005d0}}"
+"label" = "{<adr> Node Address =  0x506000000200|<value> \"=\"|Statement operand|{<d0>0x5040000004d0 |<d1>0x5040000005d0}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node26: <d0> -> node27[color = "blue"];
@@ -235,70 +235,182 @@ shape = "record"];node1: <d6> -> node32[color = "blue"];
 
 "node32" [
 rank = 8
-"label" = "{<adr> Node Address =  0x506000000260|<value> Operand = =|Statement operand|{<d0>0x504000000610 |<d1>0x504000000690}}"
+"label" = "{<adr> Node Address =  0x506000000260|<value> \"if\"|Conditional cycle|{<d0>0x5060000002c0 |<d1>0x5040000006d0}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node32: <d0> -> node33[color = "blue"];
 
 "node33" [
 rank = 9
-"label" = "{<adr> Node Address =  0x504000000610|<value> Table Number = 6|Left Variable}"
+"label" = "{<adr> Node Address =  0x5060000002c0|<value> Number of Statements = 3|Scope|{<d0>0x506000000320 |<d1>0x506000000380 |<d2>0x5060000003e0}}"
 color="black"
 fillcolor="cyan"
-shape = "record"];node32: <d1> -> node34[color = "blue"];
+shape = "record"];node33: <d0> -> node34[color = "blue"];
 
 "node34" [
 rank = 10
-"label" = "{<adr> Node Address =  0x504000000690|<value> Expression|Expression|{<d0>0x504000000650}}"
+"label" = "{<adr> Node Address =  0x506000000320|<value> \"=\"|Statement operand|{<d0>0x504000000710 |<d1>0x504000000790}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node34: <d0> -> node35[color = "blue"];
 
 "node35" [
 rank = 11
-"label" = "{<adr> Node Address =  0x504000000650|<value> 2|Integer Value}"
+"label" = "{<adr> Node Address =  0x504000000710|<value> Table Number = 6|Left Variable}"
 color="black"
 fillcolor="cyan"
-shape = "record"];node1: <d7> -> node36[color = "blue"];
+shape = "record"];node34: <d1> -> node36[color = "blue"];
 
 "node36" [
-rank = 9
-"label" = "{<adr> Node Address =  0x5060000002c0|<value> Operand = =|Statement operand|{<d0>0x5040000006d0 |<d1>0x5040000007d0}}"
+rank = 12
+"label" = "{<adr> Node Address =  0x504000000790|<value> Expression|Expression|{<d0>0x504000000750}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node36: <d0> -> node37[color = "blue"];
 
 "node37" [
-rank = 10
-"label" = "{<adr> Node Address =  0x5040000006d0|<value> Table Number = 7|Left Variable}"
+rank = 13
+"label" = "{<adr> Node Address =  0x504000000750|<value> 1|Integer Value}"
 color="black"
 fillcolor="cyan"
-shape = "record"];node36: <d1> -> node38[color = "blue"];
+shape = "record"];node33: <d1> -> node38[color = "blue"];
 
 "node38" [
 rank = 11
-"label" = "{<adr> Node Address =  0x5040000007d0|<value> Expression|Expression|{<d0>0x504000000790}}"
+"label" = "{<adr> Node Address =  0x506000000380|<value> \"=\"|Statement operand|{<d0>0x5040000007d0 |<d1>0x5040000008d0}}"
 color="black"
 fillcolor="cyan"
 shape = "record"];node38: <d0> -> node39[color = "blue"];
 
 "node39" [
 rank = 12
-"label" = "{<adr> Node Address =  0x504000000790|<value> +|Operator|{<d0>0x504000000710 |<d1>0x504000000750}}"
+"label" = "{<adr> Node Address =  0x5040000007d0|<value> Table Number = 7|Left Variable}"
 color="black"
 fillcolor="cyan"
-shape = "record"];node39: <d0> -> node40[color = "blue"];
+shape = "record"];node38: <d1> -> node40[color = "blue"];
 
 "node40" [
 rank = 13
-"label" = "{<adr> Node Address =  0x504000000710|<value> b|Right Variable}"
+"label" = "{<adr> Node Address =  0x5040000008d0|<value> Expression|Expression|{<d0>0x504000000890}}"
 color="black"
 fillcolor="cyan"
-shape = "record"];node39: <d1> -> node41[color = "blue"];
+shape = "record"];node40: <d0> -> node41[color = "blue"];
 
 "node41" [
 rank = 14
-"label" = "{<adr> Node Address =  0x504000000750|<value> c|Right Variable}"
+"label" = "{<adr> Node Address =  0x504000000890|<value> +|Operator|{<d0>0x504000000810 |<d1>0x504000000850}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node41: <d0> -> node42[color = "blue"];
+
+"node42" [
+rank = 15
+"label" = "{<adr> Node Address =  0x504000000810|<value> ligma|Right Variable}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node41: <d1> -> node43[color = "blue"];
+
+"node43" [
+rank = 16
+"label" = "{<adr> Node Address =  0x504000000850|<value> 1|Integer Value}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node33: <d2> -> node44[color = "blue"];
+
+"node44" [
+rank = 12
+"label" = "{<adr> Node Address =  0x5060000003e0|<value> \"if\"|Conditional cycle|{<d0>0x504000000a10 |<d1>0x5040000009d0}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node44: <d0> -> node45[color = "blue"];
+
+"node45" [
+rank = 13
+"label" = "{<adr> Node Address =  0x504000000a10|<value> Number of Statements = 1|Scope|{<d0>0x506000000440}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node45: <d0> -> node46[color = "blue"];
+
+"node46" [
+rank = 14
+"label" = "{<adr> Node Address =  0x506000000440|<value> \"=\"|Statement operand|{<d0>0x504000000a50 |<d1>0x504000000ad0}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node46: <d0> -> node47[color = "blue"];
+
+"node47" [
+rank = 15
+"label" = "{<adr> Node Address =  0x504000000a50|<value> Table Number = 8|Left Variable}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node46: <d1> -> node48[color = "blue"];
+
+"node48" [
+rank = 16
+"label" = "{<adr> Node Address =  0x504000000ad0|<value> Expression|Expression|{<d0>0x504000000a90}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node48: <d0> -> node49[color = "blue"];
+
+"node49" [
+rank = 17
+"label" = "{<adr> Node Address =  0x504000000a90|<value> balls|Right Variable}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node44: <d1> -> node50[color = "blue"];
+
+"node50" [
+rank = 14
+"label" = "{<adr> Node Address =  0x5040000009d0|<value> Expression|Expression|{<d0>0x504000000990}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node50: <d0> -> node51[color = "blue"];
+
+"node51" [
+rank = 15
+"label" = "{<adr> Node Address =  0x504000000990|<value> ^|Operator|{<d0>0x504000000910 |<d1>0x504000000950}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node51: <d0> -> node52[color = "blue"];
+
+"node52" [
+rank = 16
+"label" = "{<adr> Node Address =  0x504000000910|<value> a|Right Variable}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node51: <d1> -> node53[color = "blue"];
+
+"node53" [
+rank = 17
+"label" = "{<adr> Node Address =  0x504000000950|<value> xyz|Right Variable}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node32: <d1> -> node54[color = "blue"];
+
+"node54" [
+rank = 10
+"label" = "{<adr> Node Address =  0x5040000006d0|<value> Expression|Expression|{<d0>0x504000000690}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node54: <d0> -> node55[color = "blue"];
+
+"node55" [
+rank = 11
+"label" = "{<adr> Node Address =  0x504000000690|<value> &|Operator|{<d0>0x504000000610 |<d1>0x504000000650}}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node55: <d0> -> node56[color = "blue"];
+
+"node56" [
+rank = 12
+"label" = "{<adr> Node Address =  0x504000000610|<value> a|Right Variable}"
+color="black"
+fillcolor="cyan"
+shape = "record"];node55: <d1> -> node57[color = "blue"];
+
+"node57" [
+rank = 13
+"label" = "{<adr> Node Address =  0x504000000650|<value> b|Right Variable}"
 color="black"
 fillcolor="cyan"
 shape = "record"];}

@@ -8,6 +8,8 @@ static void* GetFunctionBody(const Tree_t* Tree, const TokenTable_t* TokenTable,
 
 static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+static void* GetConditionalCycle(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+static void* GetConditionArguments(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetStatementOperand(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetLeftVariable(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 
@@ -23,6 +25,9 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
 static void* GetExpressionBrackets(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetRightVariable(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
 static void* GetValue(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+
+
+static size_t ScopeStatementCount(const TokenTable_t* TokenTable, size_t TokenIndex, size_t* StatementCounter);
 
 
 int GetProgram(Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
@@ -88,7 +93,7 @@ static void* GetVariableDeclaration(const Tree_t* Tree, const TokenTable_t* Toke
             return GetFunctionBody(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
         }
     }
-    else
+    else // TODO global variable init
     {
         assert(0);
         return NULL;
@@ -147,6 +152,7 @@ static void* GetFunctionBody(const Tree_t* Tree, const TokenTable_t* TokenTable,
         size_t FunctionIndex = FunctionTableAppend(FunctionTable, Function);
 
         // TEMP SOLUTION
+        // Now making cool solution
         (*TokenIndex) += 3;
         // TEMP SOLUTION
         
@@ -170,30 +176,11 @@ static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t
     if(TokenType == CURLY_OPEN_TOKEN)
     {
         (*TokenIndex)++;
-        int CurlyCounter = 1;
-        size_t StatementCounter = 0; // UPGRADE LATER
-        for(size_t i = *TokenIndex; i < TokenTable->Free; i++)
-        {
-            size_t CurrentTokenType = TokenTable->TokenArray[i].TokenType;
+        
+        size_t StatementCounter = 0;
+        ScopeStatementCount(TokenTable, *TokenIndex, &StatementCounter); // UPGRADE LATER; UPGRADED, pretty cool now;
 
-            if(CurrentTokenType == STATEMENT_SEPARATOR_TOKEN)
-            {
-                StatementCounter++;
-            }
-            else if(CurrentTokenType == CURLY_OPEN_TOKEN)
-            {
-                CurlyCounter++;
-            }
-            else if(CurrentTokenType == CURLY_CLOSE_TOKEN)
-            {
-                CurlyCounter--;
-            }
-
-            if(CurlyCounter == 0)
-            {
-                break;
-            }
-        }
+        fprintf(stderr, "%zu\n", StatementCounter);
 
         void* ScopeNode = Tree->InitNode(Tree, SCOPE_NODE, sizeof(StatementCounter), &StatementCounter, StatementCounter);
 
@@ -201,6 +188,13 @@ static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t
         {
             AddDescendant(ScopeNode, GetStatement(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable), i);
         }
+
+        if(TokenTable->TokenArray[*TokenIndex].TokenType != CURLY_CLOSE_TOKEN)
+        {
+            assert(0);
+        }
+
+        (*TokenIndex)++;
 
         return ScopeNode;
     }
@@ -210,6 +204,56 @@ static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t
         return NULL;
     }
     return NULL;
+}
+
+static size_t ScopeStatementCount(const TokenTable_t* TokenTable, size_t TokenIndex, size_t* StatementCounter)
+{
+    size_t CurlyCounter = 1;
+    size_t i = 0;
+    for(i = TokenIndex; i < TokenTable->Free; i++)
+    {
+        size_t CurrentTokenType = TokenTable->TokenArray[i].TokenType;
+
+        if(CurrentTokenType == STATEMENT_SEPARATOR_TOKEN)
+        {
+            (*StatementCounter)++;
+        }
+
+        else if(CurrentTokenType == CURLY_OPEN_TOKEN)
+        {
+            CurlyCounter++;
+        }
+
+        else if(CurrentTokenType == CURLY_CLOSE_TOKEN)
+        {
+            CurlyCounter--;
+        }
+        else if(CurrentTokenType == LONG_TOKEN)
+        {
+            for(size_t j = 1; j < CONDITIONAL_CYCLES_SECTION_END - CONDITIONAL_CYCLES_SECTION_START; j++) // RENAME RETARD, RETARD RETARD
+            {
+                if(strncmp(TokenTable->TokenArray[i].TokenData.LongTokenName, KeyWordsArray[CONDITIONAL_CYCLES_SECTION_START + j].Name, strlen(KeyWordsArray[CONDITIONAL_CYCLES_SECTION_START + j].Name)) == 0)
+                {
+                    (*StatementCounter)++;
+                    while(TokenTable->TokenArray[i].TokenType != CURLY_OPEN_TOKEN)
+                    {
+                        i++;
+                    }
+                    i++;
+                    size_t Fill = 0;
+                    i += ScopeStatementCount(TokenTable, i, &Fill);
+                    break;
+                }
+            }   
+        }
+
+        if(CurlyCounter == 0)
+        {
+            break;
+        }
+    }
+
+    return i - TokenIndex;
 }
 
 static size_t FunctionTableAppend(FunctionTable_t* FunctionTable, Function_t Function)
@@ -237,6 +281,15 @@ static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, si
     assert(VariableTable);
     assert(FunctionTable);
 
+    for(size_t i = 1; i < CONDITIONAL_CYCLES_SECTION_END - CONDITIONAL_CYCLES_SECTION_START; i++)
+    {
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[CONDITIONAL_CYCLES_SECTION_START + i].Name, strlen(KeyWordsArray[CONDITIONAL_CYCLES_SECTION_START + i].Name)) == 0)
+        {
+            TokenTable->TokenArray[*TokenIndex].AdditionalData = CONDITIONAL_CYCLES_SECTION_START + (int)i;
+            return GetConditionalCycle(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+        }
+    }
+
     void* LeftPart = GetLeftVariable(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
     void* OperandNode = GetStatementOperand(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
 
@@ -254,6 +307,52 @@ static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, si
     }
 }
 
+static void* GetConditionalCycle(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
+{
+    assert(Tree);
+    assert(TokenTable);
+    assert(TokenIndex);
+    assert(VariableTable);
+    assert(FunctionTable);
+
+    void* ConditionNode = Tree->InitNode(Tree, CONDITION_NODE, sizeof(TokenTable->TokenArray[*TokenIndex].AdditionalData), &TokenTable->TokenArray[*TokenIndex].AdditionalData, 2);
+
+    (*TokenIndex)++;
+
+    if(TokenTable->TokenArray[*TokenIndex].TokenType != PARENTHESES_OPEN_TOKEN)
+    {
+        assert(0);
+    }
+
+    (*TokenIndex)++;
+
+    void* Condition =  GetConditionArguments(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+
+    assert(Condition);
+    assert(GetNodeData(Condition, DESCENDANTS_FIELD_CODE, 0));
+
+    (*TokenIndex)++;
+
+    AddDescendant(ConditionNode, Condition, 1);
+
+    fprintf(stderr, "Whoopsie\n");
+    AddDescendant(ConditionNode, GetScope(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable), 0);
+    fprintf(stderr, "Daisy\n");
+
+    return ConditionNode;
+}
+
+static void* GetConditionArguments(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
+{
+    assert(Tree);
+    assert(TokenTable);
+    assert(TokenIndex);
+    assert(VariableTable);
+    assert(FunctionTable);
+
+    return GetExpression(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
+}
+
 static void* GetStatementOperand(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable)
 {
     assert(Tree);
@@ -261,7 +360,7 @@ static void* GetStatementOperand(const Tree_t* Tree, const TokenTable_t* TokenTa
     assert(TokenIndex);
     assert(VariableTable);
     assert(FunctionTable);
-    fprintf(stderr, "%s\n", TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName);
+
     size_t TokenType = TokenTable->TokenArray[*TokenIndex].TokenType;
     if(TokenType == LONG_TOKEN)
     {
@@ -308,7 +407,9 @@ static void* GetLeftVariable(const Tree_t* Tree, const TokenTable_t* TokenTable,
     }
     else
     {
-        assert(0); // TODO function calls and if
+        fprintf(stderr, "%zu\n", *TokenIndex);
+        fprintf(stderr, "%s\n",  TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName);
+        assert(0); 
     }
 }
 
@@ -361,7 +462,7 @@ static void* GetLogicalXor(const Tree_t* Tree, const TokenTable_t* TokenTable, s
 
     while(TokenTable->TokenArray[*TokenIndex].TokenType == LONG_TOKEN)
     {
-        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[LOGICAL_XOR].Name, strlen(KeyWordsArray[LOGICAL_XOR].Name)) == 0)
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[LOGICAL_XOR_INDEX].Name, strlen(KeyWordsArray[LOGICAL_XOR_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
             NewNode2 = GetLogicalOr(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
@@ -412,7 +513,7 @@ static void* GetLogicalOr(const Tree_t* Tree, const TokenTable_t* TokenTable, si
 
     while(TokenTable->TokenArray[*TokenIndex].TokenType == LONG_TOKEN)
     {
-        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[LOGICAL_OR].Name, strlen(KeyWordsArray[LOGICAL_OR].Name)) == 0)
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[LOGICAL_OR_INDEX].Name, strlen(KeyWordsArray[LOGICAL_OR_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
             NewNode2 = GetLogicalAnd(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
@@ -463,7 +564,7 @@ static void* GetLogicalAnd(const Tree_t* Tree, const TokenTable_t* TokenTable, s
 
     while(TokenTable->TokenArray[*TokenIndex].TokenType == LONG_TOKEN)
     {
-        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[LOGICAL_AND].Name, strlen(KeyWordsArray[LOGICAL_AND].Name)) == 0)
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[LOGICAL_AND_INDEX].Name, strlen(KeyWordsArray[LOGICAL_AND_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
             NewNode2 = GetAriphmeticalMul(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
@@ -514,7 +615,7 @@ static void* GetAriphmeticalSum(const Tree_t* Tree, const TokenTable_t* TokenTab
 
     while(TokenTable->TokenArray[*TokenIndex].TokenType == LONG_TOKEN)
     {
-        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_SUM].Name, strlen(KeyWordsArray[ARIPHMETICAL_SUM].Name)) == 0)
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_SUM_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_SUM_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
             NewNode2 = GetAriphmeticalMul(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
@@ -542,7 +643,7 @@ static void* GetAriphmeticalSum(const Tree_t* Tree, const TokenTable_t* TokenTab
             }
             Root = Tree->InitNode(Tree, ARIPHMETICAL_SUM_NODE, 0, NULL, 2, Root, NewNode2);
         }
-        else if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_SUB].Name, strlen(KeyWordsArray[ARIPHMETICAL_SUB].Name)) == 0)
+        else if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_SUB_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_SUB_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
             NewNode2 = GetAriphmeticalMul(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
@@ -593,7 +694,7 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
 
     while(TokenTable->TokenArray[*TokenIndex].TokenType == LONG_TOKEN)
     {
-        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_MUL].Name, strlen(KeyWordsArray[ARIPHMETICAL_MUL].Name)) == 0)
+        if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_MUL_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_MUL_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
             NewNode2 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);
@@ -621,7 +722,7 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
             }
             Root = Tree->InitNode(Tree, ARIPHMETICAL_MUL_NODE, 0, NULL, 2, Root, NewNode2);
         }
-        else if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_DIV].Name, strlen(KeyWordsArray[ARIPHMETICAL_DIV].Name)) == 0)
+        else if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name)) == 0)
         {
             (*TokenIndex)++;
             NewNode2 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTable, FunctionTable);

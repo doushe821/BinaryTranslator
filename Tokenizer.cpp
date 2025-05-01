@@ -164,7 +164,6 @@ TokenTable_t* Tokenize(char* Source, size_t SourceSize)
 
 static int TokenArrayAppend(TokenTable_t* TokenTable, Token_t Token)
 {
-    fprintf(stderr, "Token appended\n");
     assert(TokenTable);
     assert(TokenTable->TokenArray);
 
@@ -190,7 +189,6 @@ static void TokenDumpArray(TokenTable_t* TokenTable)
     assert(TokenTable);
     FILE* fp = fopen("TokenArrayDumpDEBUG.txt", "w+b");
     assert(fp);
-    fprintf(stderr, "%zu\n", TokenTable->Free);
     for(size_t i = 0; i < TokenTable->Free; i++)
     {
         switch(TokenTable->TokenArray[i].TokenType)

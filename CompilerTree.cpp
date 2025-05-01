@@ -86,11 +86,20 @@ int NodeDump(const void* Node, FILE* Out)
 
     switch(NodeType)
     {
+        case CONDITION_NODE:
+        {
+            int Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, "\\\"%s\\\"|Conditional cycle", KeyWordsArray[Value].Name);
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;
+        }
         case STATEMENT_OPERAND_NODE:
         {
             size_t Value = 0;
             memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
-            fprintf(Out, "Operand = %s|Statement operand", KeyWordsArray[Value].Name);
+            fprintf(Out, "\\\"%s\\\"|Statement operand", KeyWordsArray[Value].Name);
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
             break;
@@ -138,7 +147,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case ARIPHMETICAL_SUM_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUM].Name);
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUM_INDEX].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
@@ -146,7 +155,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case ARIPHMETICAL_SUB_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUB].Name);
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUB_INDEX].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
@@ -154,7 +163,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case ARIPHMETICAL_MUL_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_MUL].Name);
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_MUL_INDEX].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
@@ -162,7 +171,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case ARIPHMETICAL_DIV_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_DIV].Name);
+            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
@@ -170,7 +179,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case LOGICAL_AND_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_AND].Name);
+            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_AND_INDEX].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
@@ -178,7 +187,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case LOGICAL_OR_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_OR].Name);
+            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_OR_INDEX].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
@@ -186,7 +195,7 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case LOGICAL_XOR_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_XOR].Name);
+            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_XOR_INDEX].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
