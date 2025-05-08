@@ -3,6 +3,6 @@
 
 #include "CompilerTree.h"
 
-int GetProgram(Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, VariableTable_t* VariableTable, FunctionTable_t* FunctionTable);
+int GetProgram(Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable);
 
 #endif

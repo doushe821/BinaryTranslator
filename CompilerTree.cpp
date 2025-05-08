@@ -149,9 +149,11 @@ int NodeDump(const void* Node, FILE* Out)
         }
         case LEFT_VARIABLE_NODE:
         {
-            size_t Value = 0;
+            int Value = 0;
             memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
-            fprintf(Out, "Table Number = %zu|Left Variable", Value);
+            char Name[VARIABLE_NAME_MAX] = {};
+            memcpy(Name, (char*)GetNodeData(Node, DATA_FIELD_CODE, 0) + sizeof(Value), VARIABLE_NAME_MAX);
+            fprintf(Out, "Table Number = %d|Name: \\\"%s\\\"|Left Variable", Value, Name);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
             break;
         }

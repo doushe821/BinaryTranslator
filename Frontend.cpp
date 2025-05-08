@@ -23,10 +23,10 @@ int main()
         NULL,
     };
 
-    VariableTable_t VariableTable = {};
-    VariableTable.VariablesArray = (Variable_t*)calloc(InitalArraySize, sizeof(Variable_t));
-    VariableTable.Capacity = InitalArraySize;
-    if(VariableTable.VariablesArray == NULL)
+
+    List_t* VariableTablesList = NULL;
+    ListInit(&VariableTablesList, InitalArraySize, sizeof(void*), 0);
+    if(VariableTablesList == NULL)
     {
         free(Buffer);
         free(TokenTable->TokenArray);
@@ -34,20 +34,31 @@ int main()
         return -1;
     }
 
+   // VariableTable_t VariableTable = {};
+   // VariableTable.VariablesArray = (Variable_t*)calloc(InitalArraySize, sizeof(Variable_t));
+   // VariableTable.Capacity = InitalArraySize;
+   // if(VariableTable.VariablesArray == NULL)
+   // {
+   //     free(Buffer);
+   //     free(TokenTable->TokenArray);
+   //     assert(0);
+   //     return -1;
+   // }
+
     FunctionTable_t FunctionTable = {};
     FunctionTable.FunctionsArray = (Function_t*)calloc(InitalArraySize, sizeof(Function_t));
     FunctionTable.Capacity = InitalArraySize;
-    if(VariableTable.VariablesArray == NULL)
+    if(FunctionTable.FunctionsArray == NULL)
     {
         free(Buffer);
         free(TokenTable->TokenArray);
-        free(VariableTable.VariablesArray);
+        ListDstr(VariableTablesList);
         assert(0);
         return -1;
     }
 
     size_t TokenIndex = 0;
-    GetProgram(&Tree, TokenTable, &TokenIndex, &VariableTable, &FunctionTable);
+    GetProgram(&Tree, TokenTable, &TokenIndex, VariableTablesList, &FunctionTable);
 
     #ifndef NDEBUG
     FILE* TreeDumpDebug = fopen("TreeDump.dot", "w+b");
@@ -57,7 +68,14 @@ int main()
     #endif
 
     BurnTree(&Tree);
-    free(VariableTable.VariablesArray);
+    for(size_t i = 1; i < VariableTablesList->free; i++)
+    {
+        VariableTable_t* VarTable = NULL;
+        memcpy(&VarTable, ListGetNodeValueInd(VariableTablesList, i), sizeof(void*));
+        free(VarTable->VariablesArray);
+        free(VarTable);
+    }
+    ListDstr(VariableTablesList);
     free(FunctionTable.FunctionsArray);
     free(Buffer);
     free(TokenTable->TokenArray);

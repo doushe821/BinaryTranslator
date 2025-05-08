@@ -1,15 +1,11 @@
-int main(float Big_Penis)
+int main(int dude)
 {
-    int a = -2;
-    int b = 2;
-    int c = (a / b) * 2;
-    if(a + b - 2 * c / (a + c))
-    {
+    int cum = 0;
+    int semen = cum;
+    int plesen = 0;
 
-    }
-    float sperm = 3;
-    if(sperm + main(sperm))
+    if(cum & 0)
     {
-        a = b;
+        int cum = 1;
     }
 }
