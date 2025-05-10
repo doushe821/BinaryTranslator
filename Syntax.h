@@ -31,6 +31,7 @@ enum KeyWordsTableIndexes // TODO Remove assignments later
 
     PARENTHESES_OPEN_INDEX,
     PARENTHESES_CLOSE_INDEX,
+
     CURLY_OPEN_INDEX,
     CURLY_CLOSE_INDEX,
     ARIPHMETICAL_SUM_INDEX,
@@ -60,6 +61,10 @@ enum KeyWordsTableIndexes // TODO Remove assignments later
     MORE_OR_EQUAL_INDEX,
     NOT_EQUAL_INDEX,
     COMPARISON_OPERANDS_SECTION_END,
+
+    RETURN_INDEX,
+
+    MAIN_INDEX,
 };
 
 struct KeyWord
@@ -108,6 +113,10 @@ __attribute((unused)) static KeyWord KeyWordsArray[NumberOfKeyWords] =
     {">="       , NO_CODE                           },
     {"!="       , NO_CODE                           },
     {""         , COMPARISON_OPERANDS_SECTION_END   },
+
+    {"return"   , NO_CODE                           },
+
+    {"main"     , NO_CODE                           },
 
 };
 

@@ -87,6 +87,22 @@ int NodeDump(const void* Node, FILE* Out)
 
     switch(NodeType)
     {
+        case RETURN_NODE:
+        {
+            fprintf(Out, "Return|");
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"#FAE7B5\"\n");
+            break;          
+        }
+        case COMPARISON_OPERAND_NODE:
+        {
+            size_t Value = 0;
+            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
+            fprintf(Out, " \\\"\\%s\\\"|Comparison operand node", KeyWordsArray[Value].Name);
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            break;        
+        }
         case FUNCTION_CALL_NODE:
         {
             int Value = 0;
@@ -100,7 +116,7 @@ int NodeDump(const void* Node, FILE* Out)
         {
             fprintf(Out, "Program");
             PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"#2F4F4F\"\n");
             break;     
         }
         case FUNCTION_ARGUMENTS_NODE:
@@ -127,7 +143,7 @@ int NodeDump(const void* Node, FILE* Out)
             memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
             fprintf(Out, "\\\"%s\\\"|Statement operand", KeyWordsArray[Value].Name);
             PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"grey\"\n");
             break;
         }
         case SCOPE_NODE:
@@ -136,7 +152,7 @@ int NodeDump(const void* Node, FILE* Out)
             memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
             fprintf(Out, "Number of Statements = %zu|Scope", Value);
             PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"purple\"\n");
             break;
         }
         case FUNCTION_BODY_NODE:
@@ -233,7 +249,7 @@ int NodeDump(const void* Node, FILE* Out)
         {
             fprintf(Out, "Expression|Expression"); // TODO value should be number of descendant nodes
             PrintDescendants(Node, Out); // FIXME look up
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"orange\"\n");
             break;
         }
         case RIGHT_VARIABLE_NODE:

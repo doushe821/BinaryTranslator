@@ -11,6 +11,7 @@ static void* GetFunctionBodyArguments(const Tree_t* Tree, const TokenTable_t* To
 
 static void* GetScope(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable);
 static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable);
+static void* GetReturn(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable);
 static void* GetConditionalCycle(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable);
 static void* GetConditionArguments(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable);
 static void* GetStatementOperand(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable);
@@ -72,7 +73,7 @@ int GetProgram(Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex,
     
     size_t ProgramListLength = GetLinearListSize(ProgramList) / ProgramList->elsize;
     fprintf(stderr, "Program list length = %zu\n", ProgramListLength);
-    Tree->root = Tree->InitNode(Tree, PROGRAM_NODE, 0, NULL, ProgramListLength);
+    Tree->root = Tree->InitNode(Tree, PROGRAM_NODE, sizeof(ProgramListLength), &ProgramListLength, ProgramListLength);
 
     for(size_t i = 0; i < ProgramListLength; i++)
     {
@@ -449,6 +450,21 @@ static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, si
         }
     }
 
+    if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[RETURN_INDEX].Name, strlen(KeyWordsArray[RETURN_INDEX].Name)) == 0)
+    {   
+        fprintf(stderr, "sex");
+        void* ReturnNode = GetReturn(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable);
+        if(TokenTable->TokenArray[*TokenIndex].TokenType == STATEMENT_SEPARATOR_TOKEN)
+        {
+            (*TokenIndex)++;
+        }
+        else
+        {
+            assert(0 && "Sperma");
+        }
+        return ReturnNode;
+    }
+
     void* LeftPart = GetLeftVariable(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable);
     void* OperandNode = GetStatementOperand(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable);
 
@@ -464,6 +480,17 @@ static void* GetStatement(const Tree_t* Tree, const TokenTable_t* TokenTable, si
     {
         assert(0);
     }
+}
+
+static void* GetReturn(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable)
+{
+    assert(Tree);
+    assert(TokenTable);
+    assert(TokenIndex);
+    assert(VariableTablesList);
+    assert(FunctionTable);
+    (*TokenIndex)++;
+    return Tree->InitNode(Tree, RETURN_NODE, 0, NULL, 1, GetExpression(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable));
 }
 
 static void* GetFunctionCall(const Tree_t* Tree, const TokenTable_t* TokenTable, size_t* TokenIndex, List_t* VariableTablesList, FunctionTable_t* FunctionTable)
@@ -533,7 +560,7 @@ static void* GetConditionalCycle(const Tree_t* Tree, const TokenTable_t* TokenTa
     VariableTable->VariablesArray = (Variable_t*)calloc(InitalArraySize, sizeof(Variable_t));
     assert(VariableTable->VariablesArray);
     PushFront(VariableTablesList, &VariableTable);
-    
+
     AddDescendant(ConditionNode, GetScope(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable), 0);
 
     return ConditionNode;
@@ -767,7 +794,7 @@ static void* GetExpression(const Tree_t* Tree, const TokenTable_t* TokenTable, s
     assert(VariableTablesList);
     assert(FunctionTable);
 
-    void* NewNode = Tree->InitNode(Tree, EXPRESSION_NODE, 0, NULL,  1, GetLogicalXor(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable));
+    void* NewNode = GetLogicalXor(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable);
     return NewNode;
 }
 
@@ -1104,13 +1131,14 @@ static void* GetComparisonOperand(const Tree_t* Tree, const TokenTable_t* TokenT
     while(KeyWordIndex != 0)
     {
         (*TokenIndex)++;
-        (*TokenIndex)++;
+
         NewNode2 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable);
 
         Root = Tree->InitNode(Tree, COMPARISON_OPERAND_NODE, sizeof(KeyWordIndex), &KeyWordIndex, 2, Root, NewNode2);
 
         KeyWordIndex = SearchComparisonOperand(TokenTable, TokenIndex);
     }
+
     return Root;
 }
 

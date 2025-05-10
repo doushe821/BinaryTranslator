@@ -1,11 +1,11 @@
 int main(int dude)
 {
     int cum = 0;
-    int semen = cum;
-    int plesen = 0;
+    int kitkat = 1;
+    int gore = 35;
+    int semen = 5;
 
-    if(cum & 0)
-    {
-        int cum = 1;
-    }
+    gore = cum > semen * kitkat / (cum * kitkat - semen);
+
+    return gore;
 }
