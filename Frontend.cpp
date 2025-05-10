@@ -2,6 +2,7 @@
 
 #include "Tokenizer.h"
 #include "Syntaxer.h"
+#include "IntermediateRepresentationGenerator.h"
 
 #include <assert.h>
 
@@ -66,6 +67,12 @@ int main()
     PrintTreeGraphViz(TreeDumpDebug, Tree, "TreeDump.pdf");
     fclose(TreeDumpDebug);
     #endif
+
+    FILE* IntermediateRepresentationOutputFile = fopen("ir.pyam", "w+b");
+    assert(IntermediateRepresentationOutputFile);
+    GenerateIntermediateRepresentation(&Tree, &FunctionTable, IntermediateRepresentationOutputFile);
+
+    fclose(IntermediateRepresentationOutputFile);
 
     BurnTree(&Tree);
     for(size_t i = 1; i < VariableTablesList->free; i++)

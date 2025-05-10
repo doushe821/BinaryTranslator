@@ -29,14 +29,14 @@ else ifeq ($(TARGET), debug)
 	-Wnon-virtual-dtor -Wopenmp-simd -Woverloaded-virtual -Wpacked -Wpointer-arith -Winit-self \
 	-Wredundant-decls -Wshadow -Wsign-conversion -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=2 \
 	-Wsuggest-attribute=noreturn -Wsuggest-final-methods -Wsuggest-final-types -Wsuggest-override \
-	-Wswitch-default -Wswitch-enum -Wsync-nand -Wundef -Wunreachable-code -Wunused -Wuseless-cast \
+	-Wswitch-default -Wswitch-enum -Wsync-nand -Wundef -Wunreachable-code -Wuseless-cast \
 	-Wvariadic-macros -Wno-literal-suffix -Wno-missing-field-initializers -Wno-narrowing -Wno-old-style-cast \
 	-Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation -fstack-protector -fstrict-overflow -fno-omit-frame-pointer -pie -fPIE -Werror=vla \
 	-fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr 
 endif
 
 
-SOURCES=Frontend.cpp FileBufferizer/FileBufferizer.cpp Tokenizer.cpp CompilerTree.cpp Syntaxer.cpp Tree/Tree.cpp List/List.cpp
+SOURCES=Frontend.cpp FileBufferizer/FileBufferizer.cpp Tokenizer.cpp CompilerTree.cpp Syntaxer.cpp Tree/Tree.cpp List/List.cpp IntermediateRepresentationGenerator.cpp
 SOURCES_ASM=
 OBJECTS:=$(addprefix $(OUT_O_DIR)/,$(SOURCES:.cpp=.o))
 OBJECTS_ASM:=$(addprefix $(OUT_O_DIR)/,$(SOURCES_ASM:.asm=.o))

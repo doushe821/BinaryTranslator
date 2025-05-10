@@ -1,0 +1,23 @@
+FunctionBody(func_0_0, 0)	# main
+assignment(0_tmp, 35)
+assignment(var0, 0_tmp)	# 
+assignment(1_tmp, var_0)
+assignment(2_tmp, 0)
+operation(28, 1_tmp, 2_tmp, 3_tmp)
+conditional_jump(3_tmp, label_0)
+label(1)	# While's start
+assignment(4_tmp, var_2)
+assignment(5_tmp, 0)
+operation(28, 4_tmp, 5_tmp, 6_tmp)
+conditional_jump(6_tmp, label_2)
+assignment(7_tmp, var_3)
+assignment(8_tmp, 1)
+operation(10, 7_tmp, 8_tmp, 9_tmp)
+assignment(var3, 9_tmp)	# 
+jump(label_1)
+label(2)	# While's end
+assignment(4_tmp, 0)
+return(4_tmp)
+label(0)	# If's end
+assignment(1_tmp, 1)
+return(1_tmp)
