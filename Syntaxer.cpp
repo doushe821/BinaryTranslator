@@ -838,7 +838,8 @@ static void* GetLogicalXor(const Tree_t* Tree, const TokenTable_t* TokenTable, s
                 free(NewNode2);
                 continue;
             }
-            Root = Tree->InitNode(Tree, LOGICAL_XOR_NODE, 0, NULL, 2, Root, NewNode2);
+            int OperationCode = LOGICAL_XOR_INDEX;
+            Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(OperationCode), &OperationCode, 2, Root, NewNode2);
         }
         else
         {
@@ -889,7 +890,8 @@ static void* GetLogicalOr(const Tree_t* Tree, const TokenTable_t* TokenTable, si
                 free(NewNode2);
                 continue;
             }
-            Root = Tree->InitNode(Tree, LOGICAL_OR_NODE, 0, NULL, 2, Root, NewNode2);
+            int OperationCode = LOGICAL_OR_INDEX;
+            Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(OperationCode), &OperationCode, 2, Root, NewNode2);
         }
         else
         {
@@ -940,7 +942,8 @@ static void* GetLogicalAnd(const Tree_t* Tree, const TokenTable_t* TokenTable, s
                 free(NewNode2);
                 continue;
             }
-            Root = Tree->InitNode(Tree, LOGICAL_AND_NODE, 0, NULL, 2, Root, NewNode2);
+            int OperationCode = LOGICAL_AND_INDEX;
+            Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(OperationCode), &OperationCode, 2, Root, NewNode2);
         }
         else
         {
@@ -991,7 +994,8 @@ static void* GetAriphmeticalSum(const Tree_t* Tree, const TokenTable_t* TokenTab
                 free(NewNode2);
                 continue;
             }
-            Root = Tree->InitNode(Tree, ARIPHMETICAL_SUM_NODE, 0, NULL, 2, Root, NewNode2);
+            int OperationCode = ARIPHMETICAL_SUM_INDEX;
+            Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(OperationCode), &OperationCode, 2, Root, NewNode2);
         }
         else if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_SUB_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_SUB_INDEX].Name)) == 0)
         {
@@ -1019,7 +1023,8 @@ static void* GetAriphmeticalSum(const Tree_t* Tree, const TokenTable_t* TokenTab
                 free(NewNode2);
                 continue;
             }
-            Root = Tree->InitNode(Tree, ARIPHMETICAL_SUB_NODE, 0, NULL, 2, Root, NewNode2);
+            int OperationCode = ARIPHMETICAL_SUB_INDEX;
+            Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(OperationCode), &OperationCode, 2, Root, NewNode2);
         }
         else
         {
@@ -1070,7 +1075,8 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
                 free(NewNode2);
                 continue;
             }
-            Root = Tree->InitNode(Tree, ARIPHMETICAL_MUL_NODE, 0, NULL, 2, Root, NewNode2);
+            int OperationCode = ARIPHMETICAL_MUL_INDEX;
+            Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(OperationCode), &OperationCode, 2, Root, NewNode2);
         }
         else if(strncmp(TokenTable->TokenArray[*TokenIndex].TokenData.LongTokenName, KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name, strlen(KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name)) == 0)
         {
@@ -1104,7 +1110,8 @@ static void* GetAriphmeticalMul(const Tree_t* Tree, const TokenTable_t* TokenTab
                 free(NewNode2);
                 continue;
             }
-            Root = Tree->InitNode(Tree, ARIPHMETICAL_DIV_NODE, 0, NULL, 2, Root, NewNode2);
+            int OperationCode = ARIPHMETICAL_DIV_INDEX;
+            Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(OperationCode), &OperationCode, 2, Root, NewNode2);
         }
         else
         {
@@ -1134,7 +1141,7 @@ static void* GetComparisonOperand(const Tree_t* Tree, const TokenTable_t* TokenT
 
         NewNode2 = GetExpressionBrackets(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable);
 
-        Root = Tree->InitNode(Tree, COMPARISON_OPERAND_NODE, sizeof(KeyWordIndex), &KeyWordIndex, 2, Root, NewNode2);
+        Root = Tree->InitNode(Tree, OPERATION_NODE, sizeof(KeyWordIndex), &KeyWordIndex, 2, Root, NewNode2);
 
         KeyWordIndex = SearchComparisonOperand(TokenTable, TokenIndex);
     }

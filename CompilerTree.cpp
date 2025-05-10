@@ -94,15 +94,6 @@ int NodeDump(const void* Node, FILE* Out)
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"#FAE7B5\"\n");
             break;          
         }
-        case COMPARISON_OPERAND_NODE:
-        {
-            size_t Value = 0;
-            memcpy(&Value, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Value));
-            fprintf(Out, " \\\"\\%s\\\"|Comparison operand node", KeyWordsArray[Value].Name);
-            PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;        
-        }
         case FUNCTION_CALL_NODE:
         {
             int Value = 0;
@@ -189,67 +180,14 @@ int NodeDump(const void* Node, FILE* Out)
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
             break;
         }
-        case ARIPHMETICAL_SUM_NODE:
+        case OPERATION_NODE:
         {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUM_INDEX].Name);
+            int OperationCode = 0;
+            memcpy(&OperationCode, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(OperationCode));
+            fprintf(Out, "\\\"\\%s\\\"|Operator", KeyWordsArray[OperationCode].Name);
 
             PrintDescendants(Node, Out);
             fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;
-        }
-        case ARIPHMETICAL_SUB_NODE:
-        {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_SUB_INDEX].Name);
-
-            PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;
-        }
-        case ARIPHMETICAL_MUL_NODE:
-        {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_MUL_INDEX].Name);
-
-            PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;
-        }
-        case ARIPHMETICAL_DIV_NODE:
-        {
-            fprintf(Out, "%s|Operator", KeyWordsArray[ARIPHMETICAL_DIV_INDEX].Name);
-
-            PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;
-        }
-        case LOGICAL_AND_NODE:
-        {
-            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_AND_INDEX].Name);
-
-            PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;
-        }
-        case LOGICAL_OR_NODE:
-        {
-            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_OR_INDEX].Name);
-
-            PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;
-        }
-        case LOGICAL_XOR_NODE:
-        {
-            fprintf(Out, "%s|Operator", KeyWordsArray[LOGICAL_XOR_INDEX].Name);
-
-            PrintDescendants(Node, Out);
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"cyan\"\n");
-            break;
-        }
-        case EXPRESSION_NODE:
-        {
-            fprintf(Out, "Expression|Expression"); // TODO value should be number of descendant nodes
-            PrintDescendants(Node, Out); // FIXME look up
-            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"orange\"\n");
             break;
         }
         case RIGHT_VARIABLE_NODE:

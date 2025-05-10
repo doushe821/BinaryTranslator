@@ -181,5 +181,58 @@ static int GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalVari
             fprintf(out, "assignment(%zu_tmp, %ld)\n", *TemporalVariableIndex, Data);
             break;
         }
+        case OPERATION_NODE:
+        {
+            GenerateOperationRepresentation(TreeNode, TemporalVariableIndex, out);
+
+            break;
+        }
     }
+}
+
+static int GenerateIntegerValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, FILE* out)
+{
+    
+}
+
+static int GenerateOperationRepresentation(void* TreeNode, size_t* TemporalVariableIndex, FILE* out)
+{
+    assert(TreeNode);
+    assert(TemporalVariableIndex);
+    assert(out);
+
+    int OperationCode = 0;
+    memcpy(&OperationCode, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(OperationCode));
+
+    void* LeftDescendant = NULL;
+    memcpy(&LeftDescendant, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 0), sizeof(void*));
+    assert(LeftDescendant);
+
+    size_t LeftDescendantType = 0;
+    memcpy(&LeftDescendantType, GetNodeData(LeftDescendant, TYPE_FIELD_CODE, 0), sizeof(LeftDescendantType));
+
+    switch(LeftDescendantType)
+    {
+        case RIGHT_VARIABLE_NODE:
+        {
+            int VariableIndex = 0;
+            memcpy(&VariableIndex, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(VariableIndex));
+            char VariableName[VARIABLE_NAME_MAX] = {};
+            memcpy(&VariableName, GetNodeData(TreeNode, DATA_FIELD_CODE, 0) + sizeof(VariableIndex), VARIABLE_NAME_MAX);
+            fprintf(out, "assignment(%zu_tmp, var_%d)\t # %s\n", *TemporalVariableIndex, VariableIndex, VariableName);
+            break;
+        }
+        case OPERATION_NODE:
+        {
+            GenerateOperationRepresentation(TreeNode, TemporalVariableIndex, out);
+            break;
+        }
+        case 
+    }
+
+    void* RightDescendant = NULL;
+    memcpy(&RightDescendant, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 1), sizeof(void*));
+    assert(RightDescendant);
+
+    fprintf(out, "operation(%d, %zu_tmp, )");
 }
