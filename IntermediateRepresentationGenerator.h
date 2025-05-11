@@ -5,6 +5,8 @@
 #include "Syntaxer.h"
 #include "Syntax.h"
 
+#include "PYAM_IR/libpyam_ir.h"
+
 #include <assert.h>
 
 #include <stdio.h>

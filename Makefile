@@ -17,6 +17,7 @@ SANITIZER_FLAGS=-fsanitize=address,alignment,bool,bounds,enum,float-cast-overflo
 
 CC?=clang
 
+
 TARGET=debug
 
 ifeq ($(TARGET), release)
@@ -35,7 +36,7 @@ else ifeq ($(TARGET), debug)
 	-fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr 
 endif
 
-
+LFLAGS= -L. -lpyam_ir
 SOURCES=Frontend.cpp FileBufferizer/FileBufferizer.cpp Tokenizer.cpp CompilerTree.cpp Syntaxer.cpp Tree/Tree.cpp List/List.cpp IntermediateRepresentationGenerator.cpp
 SOURCES_ASM=
 OBJECTS:=$(addprefix $(OUT_O_DIR)/,$(SOURCES:.cpp=.o))
@@ -52,7 +53,7 @@ EXECUTABLE=Front
 all: $(SOURCES) $(SOURCES_ASM) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) $(OBJECTS_ASM)
-	@$(CC) $(LDFLAGS) $(CFLAGS) $(LFLAGS) $(OBJECTS_ASM) $(OBJECTS) -o $@
+	@$(CC) $(CFLAGS) $(LFLAGS) $(OBJECTS_ASM) $(OBJECTS) -o $@
 
 $(OBJECTS_ASM) : $(OUT_O_DIR)/%.o : %.asm
 	@mkdir -p $(@D)
