@@ -8,18 +8,7 @@ static const size_t VARIABLE_NAME_MAX = 512;
 static const size_t KEY_WORD_NAME_MAX = 32;
 static const size_t KEY_WORD_NUMBER = 16;
 
-struct IRStatement_t
-{
-    int OpCode;
-    int IntVal;
-    double FloatVal;
-    int Op1Type;
-    int Op2Type;
-    int Op3Type;
-    char Op1Name[VARIABLE_NAME_MAX];
-    char Op2Name[VARIABLE_NAME_MAX];
-    char Op3Name[VARIABLE_NAME_MAX];
-};
+static const size_t TRANSLATOR_FUNCTION_LABEL_NAME_MAX = 32;
 
 int main()
 {
@@ -39,7 +28,6 @@ int main()
         return -1;
     }
 
-
     FILE* outputELF = fopen("gnome.asm", "w+b");
     assert(outputELF);
 
@@ -54,43 +42,247 @@ int main()
 
         switch(KeyWordCode)
         {
+            case IR_FUNCTION_BODY_INDEX:
+            {
+                i += TranslateFunctionBody(Buffer + i, outputELF);
+                break;
+            }
+            case IR_FUNCTION_CALL_INDEX:
+            {
+                i += TranslateFunctionCall(Buffer + i, outputELF);
+                break;
+            }
             case IR_ASSIGNMENT_INDEX:
             {
-                i += ParseAssignment(Buffer + i);
+                i += TranslateAssignment(Buffer + i, outputELF);
+                break;
+            }
+            case IR_RETURN_INDEX:
+            {
+                i += TranslateReturn(Buffer + i, outputELF);
+                break;
+            }
+            case IR_LABEL_INDEX:
+            {
+                i += TranslateLabel(Buffer + i, outputELF);
+                break;
+            }
+            case IR_CONDITIONAL_JUMP_INDEX:
+            {
+                i += TranslateConditionalJump(Buffer + i, outputELF);
+                break;
+            }
+            case IR_OPERATION_INDEX:
+            {
+
+            }
+            default:
+            {
                 break;
             }
         }
     }
 }
 
-
-static size_t ParseAssignment(char* Arguments)
+static size_t TranslateConditionalJump(char* Arguments, FILE* elf)
 {
-    assert(Arguments[0] == '(');
+    assert(Arguments);
+    assert(elf);
 
-    size_t LocalBufferIndex = 0;
+    assert(*Arguments == '(');
+    
+    size_t LocalBufferIndex = 1;
+    
+    char LabelName[TRANSLATOR_FUNCTION_LABEL_NAME_MAX] = {};
+
+    for(size_t i = 0; i < LocalBufferIndex; i++)
+    {
+        if(Arguments[LocalBufferIndex + i] == ',')
+        {
+            LabelName[i] = '\0';
+            LocalBufferIndex += i;
+            break;
+        }
+        LabelName[i] = Arguments[LocalBufferIndex + i];
+    }
+    
+    LocalBufferIndex += 2;
+    if(isdigit(Arguments[LocalBufferIndex]))
+    {
+        fprintf(elf, "\tpush 1\n");
+    }
+
+    while(Arguments[LocalBufferIndex] != ')')
+    {
+        LocalBufferIndex++;
+    }
+
+    LocalBufferIndex += 2;
+
+    fprintf(elf, 
+                "\tpop rdx\n"
+                "\tcmp rdx, 0\n"
+                "\tjne %s, 0\n", LabelName);
+
+    return LocalBufferIndex;
+}
+
+static size_t TranslateLabel(char* Arguments, FILE* elf)
+{
+    assert(Arguments);
+    assert(elf);
+
+    assert(*Arguments == '(');
+    
+    size_t LocalBufferIndex = 1;
+
+    char LabelName[TRANSLATOR_FUNCTION_LABEL_NAME_MAX] = {};
+
+    for(size_t i = 0; i < LocalBufferIndex; i++)
+    {
+        if(Arguments[LocalBufferIndex + i] == ')')
+        {
+            LabelName[i] = '\0';
+            LocalBufferIndex += i;
+            break;
+        }
+        LabelName[i] = Arguments[LocalBufferIndex + i];
+    }
+
+    fprintf(elf, "%s:\n", LabelName);
+
+    LocalBufferIndex += 1;
+
+    return LocalBufferIndex;
+}
+
+static size_t TranslateReturn(char* Arguments, FILE* elf)
+{
+    assert(Arguments);
+    assert(elf);
+
+    assert(*Arguments == '(');
+    
+    size_t LocalBufferIndex = 1;
+
+    fprintf(elf, 
+                "\tpop rax\n"
+                "\tpop rbp\n"
+                "\tmov rsp, r1\n"
+                "\tpop rcx\n"
+                "\tpush rbx\n"
+                );
+    
+    while(Arguments[LocalBufferIndex] != '\n');
+    {
+        LocalBufferIndex++;
+    }
+    LocalBufferIndex++;
+    return LocalBufferIndex;
+}
+
+static size_t TranslateFunctionBody(char* Arguments, FILE* elf)
+{
+    assert(Arguments);
+    assert(elf);
+
+    assert(*Arguments == '(');
+
+    size_t LocalBufferIndex = 1;
+
+    char FunctionLabel[TRANSLATOR_FUNCTION_LABEL_NAME_MAX] = {};
+
+    for(size_t i = 0; i < TRANSLATOR_FUNCTION_LABEL_NAME_MAX; i++)
+    {
+        if(*(Arguments + LocalBufferIndex + i) == ',')
+        {
+            FunctionLabel[i++] = '\0';
+            LocalBufferIndex += i;
+            break;
+        }
+        FunctionLabel[i] = *(Arguments + LocalBufferIndex + i);
+    }
+
+    fprintf(elf, "%s:\n", FunctionLabel);
+
+    LocalBufferIndex++;
+    int ArgumentsNumber = atoi(Arguments + LocalBufferIndex);
+    LocalBufferIndex += GetNumberDigits(ArgumentsNumber);
+
+    LocalBufferIndex += 2;
+
+    int LocalVariablesNumber = atoi(Arguments + LocalBufferIndex);
+    LocalBufferIndex += GetNumberDigits(LocalVariablesNumber);
+
+    fprintf(elf, 
+                "\tmov rcx, rsp\n"
+                "\tpop rbx\n"
+                "\tsub rsp, 8 * %d\n"
+                "\tpush rbp\n"
+                "\tmov r1, rsp\n"
+                "\tadd r1, 8 * %d\n"
+                "\tmov rbp, r1\n"
+                , LocalVariablesNumber - ArgumentsNumber, LocalVariablesNumber);
+    
+    LocalBufferIndex += 2;
+
+    return LocalBufferIndex;
+}
+
+static size_t TranslateFunctionCall(char* Arguments, FILE* elf)
+{
+    assert(Arguments);
+    assert(elf);
+
+    assert(*Arguments == '(');
+    
+    size_t LocalBufferIndex = 1;
+
+    char FunctionLabel[TRANSLATOR_FUNCTION_LABEL_NAME_MAX] = {};
+    while(Arguments[LocalBufferIndex] != ' ')
+    {
+        LocalBufferIndex++;
+    }
+
     LocalBufferIndex++;
 
-    int Prefix = atoi(Arguments + LocalBufferIndex);
-    switch(Prefix)
+    for(size_t i = 0; i < TRANSLATOR_FUNCTION_LABEL_NAME_MAX; i++)
     {
-        case IR_TMP_OPERAND_CODE:
+        if(*(Arguments + LocalBufferIndex + i) == ',')
         {
-            assert(0 && "sad and gay\n");
+            FunctionLabel[i++] = '\0';
+            LocalBufferIndex += i;
+            break;
         }
-        case IR_VAR_OPERAND_CODE:
-        {
-            assert(0 && "sad and gay\n");
-        }
-        case IR_ARG_OPERAND_CODE:
-        {
-            assert(0 && "sad and gay\n");
-        }
-        default:
-        {
-            assert(0 && "sad and gay\n");
-        }
+        FunctionLabel[i] = *(Arguments + LocalBufferIndex + i);
     }
+
+    LocalBufferIndex += 2;
+
+    fprintf(elf,
+                "\tpush rip\n"
+                "\tcall %s\n"
+                "\tpush rax\n", FunctionLabel);
+
+    return LocalBufferIndex;
+}
+
+static size_t GetNumberDigits(int Number)
+{
+    size_t Digits = 0;
+    while(Number > 0)
+    {
+        Digits++;
+        Number /= 10;
+    }
+    
+    return Digits;
+}
+
+static size_t TranslateAssignment(char* Arguments, FILE* elf)
+{
+    assert(Arguments);
+    assert(elf);
 }
 
 static int GetKeyWordCode(const char* IRStatement, size_t* BufferIndex)

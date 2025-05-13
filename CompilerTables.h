@@ -102,6 +102,7 @@ struct Function_t
     size_t ReturnType;
     size_t NumberOfArguments;
     char Name[FUNCTION_NAME_MAX];
+    size_t LocalVariableMaxIndex;
 };
 
 struct FunctionTable_t

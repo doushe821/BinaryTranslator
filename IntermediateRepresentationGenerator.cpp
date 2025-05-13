@@ -18,6 +18,7 @@ const char* ir_op_type_to_str(const enum IrOpType type)
         CASE_ENUM_TO_STRING_(IR_OP_TYPE_LESSEQ);
         CASE_ENUM_TO_STRING_(IR_OP_TYPE_GREAT);
         CASE_ENUM_TO_STRING_(IR_OP_TYPE_GREATEQ);
+        CASE_ENUM_TO_STRING_(IR_OP_TYPE_INVALID_OPERATION);
         default:
             return "UNKNOWN_IR_OP_TYPE";
     }
@@ -27,15 +28,16 @@ const char* ir_op_type_to_str(const enum IrOpType type)
 
 // FIXME
 
-static size_t GenerateReturnRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
-static size_t GenerateFloatValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
-static size_t GenerateIntegerValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
-static size_t GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
-static size_t GenerateAssignmentRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
+static size_t GenerateReturnRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateFloatValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateIntegerValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateAssignmentRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
 static size_t GenerateFunctionBodyRepresentation(void* TreeNode, FunctionTable_t* FunctionTable, int FunctionIndex, size_t* LocalLabelIndex, FILE* IR_file);
-static size_t GenerateOperationRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
-static size_t GenerateScopeRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
-static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file);
+static size_t GenerateOperationRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateScopeRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateFunctionCallRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
 
 static enum IrOpType SyntaxerOpCodesToPYAMConversion(int OpCode);
 
@@ -134,15 +136,21 @@ static size_t GenerateFunctionBodyRepresentation(void* TreeNode, FunctionTable_t
     memcpy(&NumberOfArguments, GetNodeData(FunctionArguments, DATA_FIELD_CODE, 0), sizeof(NumberOfArguments));
 
     //fprintf(IR_file, "FunctionBody(func_%d_%zu, %zu)\t# %s\n", FunctionIndex, NumberOfArguments, NumberOfArguments, FunctionTable->FunctionsArray[FunctionIndex].Name);
-    IR_FUNCTION_BODY_((size_t)FunctionIndex, NumberOfArguments,  FunctionTable->FunctionsArray[FunctionIndex].Name);
+    IR_FUNCTION_BODY_((size_t)FunctionIndex, NumberOfArguments,  FunctionTable->FunctionsArray[FunctionIndex].LocalVariableMaxIndex, FunctionTable->FunctionsArray[FunctionIndex].Name);
     size_t TemporalVariableIndex = 0;
 
-    GenerateScopeRepresentation(FunctionBodyScope, &TemporalVariableIndex, LocalLabelIndex, IR_file);
+    for(size_t i = 0; i < NumberOfArguments; i++)
+    {
+        IR_TAKE_ARG_((long long int) TemporalVariableIndex, i);
+        TemporalVariableIndex++;
+    }
+
+    GenerateScopeRepresentation(FunctionBodyScope, &TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
 
     return 0;
 }
 
-static size_t GenerateScopeRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateScopeRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     size_t StatementCounter = 0;
     memcpy(&StatementCounter, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(StatementCounter));
@@ -159,18 +167,23 @@ static size_t GenerateScopeRepresentation(void* TreeNode, size_t* TemporalVariab
         {
             case STATEMENT_OPERAND_NODE:
             {
-                GenerateAssignmentRepresentation(StatementNode, TemporalVariableIndex, LocalLabelIndex, IR_file);
+                GenerateAssignmentRepresentation(StatementNode, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
                 break;
             }
             case RETURN_NODE:
             {
-                GenerateReturnRepresentation(StatementNode, TemporalVariableIndex, LocalLabelIndex, IR_file);
+                GenerateReturnRepresentation(StatementNode, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
                 break;
             }
             case CONDITION_NODE:
             {
                 size_t OldTempIndex = *TemporalVariableIndex;
-                GenerateConditionRepresentation(StatementNode, &OldTempIndex, LocalLabelIndex, IR_file);
+                GenerateConditionRepresentation(StatementNode, &OldTempIndex, LocalLabelIndex, IR_file, FunctionTable);
+                break;
+            }
+            case FUNCTION_CALL_NODE:
+            {
+                GenerateFunctionCallRepresentation(StatementNode, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
                 break;
             }
             default:
@@ -184,11 +197,40 @@ static size_t GenerateScopeRepresentation(void* TreeNode, size_t* TemporalVariab
     return 0;
 }
 
-static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateFunctionCallRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     assert(TreeNode);
     assert(TemporalVariableIndex);
     assert (IR_file);
+    assert(LocalLabelIndex);
+
+    int FunctionIndex = 0;
+    memcpy(&FunctionIndex, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(FunctionIndex));
+    size_t ArgumentCount = FunctionTable->FunctionsArray[FunctionIndex].NumberOfArguments;
+
+    for(size_t i = 0; i < ArgumentCount; i++)
+    {
+        void* Argument = NULL;
+        memcpy(&Argument, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, i), sizeof(Argument));
+        assert(Argument);
+
+        GenerateExpressionRepresentation(Argument, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
+
+        IR_GIVE_ARG_(i, *TemporalVariableIndex - 1);
+    }
+
+    IR_CALL_FUNC_(*TemporalVariableIndex, (size_t)FunctionIndex, ArgumentCount, "");
+    (*TemporalVariableIndex)++;
+    return 0;
+}
+
+
+static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
+{
+    assert(TreeNode);
+    assert(TemporalVariableIndex);
+    assert (IR_file);
+    assert(LocalLabelIndex);
 
     void* Condition = NULL;
     memcpy(&Condition, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 1), sizeof(void*));
@@ -201,7 +243,7 @@ static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVa
     {
         case IF_INDEX:
         {
-            GenerateExpressionRepresentation(Condition, TemporalVariableIndex, LocalLabelIndex, IR_file);
+            GenerateExpressionRepresentation(Condition, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
             //fprintf(IR_file, "conditional_jump(%zu_tmp, label_%zu)\n", *TemporalVariableIndex - 1, *LocalLabelIndex);
             IR_COND_JMP_(*LocalLabelIndex, *TemporalVariableIndex - 1, "If's condition");
             size_t IfEnd = *LocalLabelIndex;
@@ -211,7 +253,7 @@ static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVa
             memcpy(&IfScope, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 0), sizeof(void*));
             assert(IfScope);
 
-            GenerateScopeRepresentation(IfScope, TemporalVariableIndex, LocalLabelIndex, IR_file);
+            GenerateScopeRepresentation(IfScope, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
             //fprintf(IR_file, "label(%zu)\t# %s\n", IfEnd, "If's end");
             IR_LABEL_(IfEnd, "If's end");
 
@@ -223,7 +265,7 @@ static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVa
             (*LocalLabelIndex)++;
             //fprintf(IR_file, "label(%zu)\t# %s\n", WhileStart, "While's start");
             IR_LABEL_(WhileStart, "While's start");
-            GenerateExpressionRepresentation(Condition, TemporalVariableIndex, LocalLabelIndex, IR_file);
+            GenerateExpressionRepresentation(Condition, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
 
             size_t WhileEnd = *LocalLabelIndex;
             (*LocalLabelIndex)++;
@@ -235,7 +277,7 @@ static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVa
             memcpy(&WhileScope, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 0), sizeof(void*));
             assert(WhileScope);
 
-            GenerateScopeRepresentation(WhileScope, TemporalVariableIndex, LocalLabelIndex, IR_file);
+            GenerateScopeRepresentation(WhileScope, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
             //fprintf(IR_file, "jump(label_%zu)\n", WhileStart);
             IR_JMP_(WhileStart, "Jump to while's condition");
             //fprintf(IR_file, "label(%zu)\t# %s\n", WhileEnd, "While's end");
@@ -252,11 +294,12 @@ static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVa
     return 0;
 }
 
-static size_t GenerateAssignmentRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateAssignmentRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     assert(TreeNode);
     assert(TemporalVariableIndex);
     assert (IR_file);
+    assert(LocalLabelIndex);
 
     void* LeftVariable = NULL;
     memcpy(&LeftVariable, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 0), sizeof(void*));
@@ -271,19 +314,20 @@ static size_t GenerateAssignmentRepresentation(void* TreeNode, size_t* TemporalV
     memcpy(&Expression, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 1), sizeof(void*));
     assert(Expression);
 
-    GenerateExpressionRepresentation(Expression, TemporalVariableIndex, LocalLabelIndex, IR_file);
+    GenerateExpressionRepresentation(Expression, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
 
     //fprintf(IR_file, "assignment(var%d, %zu_tmp)\t# %s\n", VariableTableIndex, *TemporalVariableIndex - 1, VariableName);
-    IR_ASSIGN_VAR_((size_t)VariableTableIndex, *TemporalVariableIndex - 1, VariableName);
+    IR_ASSIGN_VAR_((long long int)VariableTableIndex, *TemporalVariableIndex - 1, VariableName);
     //(*TemporalVariableIndex)++;
     return 0;
 }
 
-static size_t GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     assert(TreeNode);
     assert(TemporalVariableIndex);
     assert (IR_file);
+    assert(LocalLabelIndex);
 
     size_t CurrentNodeType = 0;
     memcpy(&CurrentNodeType, GetNodeData(TreeNode, TYPE_FIELD_CODE, 0), sizeof(CurrentNodeType));
@@ -292,18 +336,23 @@ static size_t GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalV
     {
         case INTEGER_VALUE_NODE:
         {
-            GenerateIntegerValueRepresentation(TreeNode, TemporalVariableIndex, LocalLabelIndex, IR_file);
+            GenerateIntegerValueRepresentation(TreeNode, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
             break;
         }
         case FLOAT_VALUE_NODE:
         {
-            GenerateFloatValueRepresentation(TreeNode, TemporalVariableIndex, LocalLabelIndex, IR_file);
+            GenerateFloatValueRepresentation(TreeNode, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
             break;
         }
         case OPERATION_NODE:
         {
-            GenerateOperationRepresentation(TreeNode, TemporalVariableIndex, LocalLabelIndex, IR_file);
+            GenerateOperationRepresentation(TreeNode, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
 
+            break;
+        }
+        case FUNCTION_CALL_NODE:
+        {
+            GenerateFunctionCallRepresentation(TreeNode, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
             break;
         }
         case RIGHT_VARIABLE_NODE:
@@ -311,7 +360,7 @@ static size_t GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalV
             int VariableIndex = 0;
             memcpy(&VariableIndex, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(VariableIndex));
             //fprintf(IR_file, "assignment(%zu_tmp, var_%d)\n", *TemporalVariableIndex, VariableIndex);
-            IR_ASSIGN_TMP_VAR_(*TemporalVariableIndex, (size_t)VariableIndex, "");
+            IR_ASSIGN_TMP_VAR_(*TemporalVariableIndex, (long long int)VariableIndex, "");
             (*TemporalVariableIndex)++;
             break;  
         }
@@ -323,7 +372,7 @@ static size_t GenerateExpressionRepresentation(void* TreeNode, size_t* TemporalV
     return 0;
 }
 
-static size_t GenerateIntegerValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, __attribute((unused))size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateIntegerValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, __attribute((unused))size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     int Data = 0;
     memcpy(&Data, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(Data));
@@ -333,7 +382,7 @@ static size_t GenerateIntegerValueRepresentation(void* TreeNode, size_t* Tempora
     return *TemporalVariableIndex - 1;  
 }
 
-static size_t GenerateFloatValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, __attribute((unused))size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateFloatValueRepresentation(void* TreeNode, size_t* TemporalVariableIndex, __attribute((unused))size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     double Data = 0;
     memcpy(&Data, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(Data));
@@ -343,17 +392,18 @@ static size_t GenerateFloatValueRepresentation(void* TreeNode, size_t* TemporalV
     return *TemporalVariableIndex - 1;
 }
 
-static size_t GenerateReturnRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateReturnRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     assert(TreeNode);
     assert(TemporalVariableIndex);
     assert (IR_file);
+    assert(LocalLabelIndex);
 
     void* ReturnValue = NULL;
     memcpy(&ReturnValue, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 0), sizeof(void*));
     assert(ReturnValue);
 
-    GenerateExpressionRepresentation(ReturnValue, TemporalVariableIndex, LocalLabelIndex, IR_file);
+    GenerateExpressionRepresentation(ReturnValue, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
 
     //fprintf(IR_file, "return(%zu_tmp)\n", *TemporalVariableIndex - 1);
     IR_RET_(*TemporalVariableIndex - 1);
@@ -362,11 +412,12 @@ static size_t GenerateReturnRepresentation(void* TreeNode, size_t* TemporalVaria
 }
 
 
-static size_t GenerateOperationRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file)
+static size_t GenerateOperationRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable)
 {
     assert(TreeNode);
     assert(TemporalVariableIndex);
     assert (IR_file);
+    assert(LocalLabelIndex);
 
     int OperationCode = 0;
     memcpy(&OperationCode, GetNodeData(TreeNode, DATA_FIELD_CODE, 0), sizeof(OperationCode));
@@ -392,24 +443,24 @@ static size_t GenerateOperationRepresentation(void* TreeNode, size_t* TemporalVa
                 int VariableIndex = 0;
                 memcpy(&VariableIndex, GetNodeData(Descendant, DATA_FIELD_CODE, 0), sizeof(VariableIndex));
                 //fprintf(IR_file, "assignment(%zu_tmp, var_%d)\n", *TemporalVariableIndex, VariableIndex);
-                IR_ASSIGN_TMP_VAR_(*TemporalVariableIndex, (size_t)VariableIndex, "");
+                IR_ASSIGN_TMP_VAR_(*TemporalVariableIndex, (long long int)VariableIndex, "");
                 ResultTmp[i] = *TemporalVariableIndex;
                 (*TemporalVariableIndex)++;
                 break;
             }
             case OPERATION_NODE:
             {
-                ResultTmp[i] = GenerateOperationRepresentation(Descendant, TemporalVariableIndex, LocalLabelIndex, IR_file);
+                ResultTmp[i] = GenerateOperationRepresentation(Descendant, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
                 break;
             }
             case INTEGER_VALUE_NODE:
             {
-                ResultTmp[i] = GenerateIntegerValueRepresentation(Descendant, TemporalVariableIndex, LocalLabelIndex, IR_file);
+                ResultTmp[i] = GenerateIntegerValueRepresentation(Descendant, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
                 break;
             }
             case FLOAT_VALUE_NODE:
             {
-                ResultTmp[i] = GenerateFloatValueRepresentation(Descendant, TemporalVariableIndex, LocalLabelIndex, IR_file);
+                ResultTmp[i] = GenerateFloatValueRepresentation(Descendant, TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
                 break;
             }
             default:
