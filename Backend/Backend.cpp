@@ -4,11 +4,16 @@
 #include <ctype.h>
 #include <assert.h>
 
-static const size_t VARIABLE_NAME_MAX = 512;
-static const size_t KEY_WORD_NAME_MAX = 32;
-static const size_t KEY_WORD_NUMBER = 16;
-
-static const size_t TRANSLATOR_FUNCTION_LABEL_NAME_MAX = 32;
+static size_t GetFloatNumberDigits(char* FloatNumberStr);
+static size_t GetNumberDigits(int Number);
+static int GetKeyWordCode(const char* IRStatement, size_t* BufferIndex);
+static int Get64ByteVariableBinaryString(void* Variable, char* String);
+static size_t TranslateAssignment(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t TranslateFunctionCall(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t TranslateFunctionBody(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t TranslateReturn(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t TranslateLabel(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t TranslateConditionalJump(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
 
 int main()
 {
@@ -20,56 +25,74 @@ int main()
 
     size_t IRFileSize = GetFileSize(IRFile);
 
-    char* Buffer = (char*)calloc(IRFileSize, sizeof(char));
-    
+    char* Buffer = FileToString(IRFile);
+
     if(Buffer == NULL)
     {
         fclose(IRFile);
         return -1;
     }
-
     FILE* outputELF = fopen("gnome.asm", "w+b");
     assert(outputELF);
 
+    TranslatorFunction_t ZeroFunction = {};
+    ZeroFunction.Index = -1;
+    ZeroFunction.NumberOfArguments = 0;
+    ZeroFunction.NumberOfLocalVariables = 0;
+
+    TranslatorFunction_t CurrentFunction = ZeroFunction;
+
     for(size_t i = 0; i < IRFileSize; i++)
     {
-        while(!isalpha(Buffer[i]) && i < IRFileSize)
+        while(!isalpha(Buffer[i]) && i < IRFileSize && Buffer[i] != '#')
         {
             i++;
         }
 
+        if(Buffer[i] == '#')
+        {
+            while(Buffer[i] != '\n')
+            {
+                i++;
+            }
+            i++;
+            continue;
+        }
+
         int KeyWordCode = GetKeyWordCode(Buffer + i, &i);
+
+
 
         switch(KeyWordCode)
         {
             case IR_FUNCTION_BODY_INDEX:
             {
-                i += TranslateFunctionBody(Buffer + i, outputELF);
+                i += TranslateFunctionBody(Buffer + i, outputELF, &CurrentFunction);
                 break;
             }
             case IR_FUNCTION_CALL_INDEX:
             {
-                i += TranslateFunctionCall(Buffer + i, outputELF);
+                i += TranslateFunctionCall(Buffer + i, outputELF, &CurrentFunction);
                 break;
             }
             case IR_ASSIGNMENT_INDEX:
             {
-                i += TranslateAssignment(Buffer + i, outputELF);
+                i += TranslateAssignment(Buffer + i, outputELF, &CurrentFunction);
                 break;
             }
             case IR_RETURN_INDEX:
             {
-                i += TranslateReturn(Buffer + i, outputELF);
+                i += TranslateReturn(Buffer + i, outputELF, &CurrentFunction);
                 break;
             }
             case IR_LABEL_INDEX:
             {
-                i += TranslateLabel(Buffer + i, outputELF);
+                i += TranslateLabel(Buffer + i, outputELF, &CurrentFunction);
                 break;
             }
             case IR_CONDITIONAL_JUMP_INDEX:
             {
-                i += TranslateConditionalJump(Buffer + i, outputELF);
+                i += TranslateConditionalJump(Buffer + i, outputELF, &CurrentFunction);
                 break;
             }
             case IR_OPERATION_INDEX:
@@ -78,13 +101,17 @@ int main()
             }
             default:
             {
+                assert(0);
                 break;
             }
         }
     }
+    free(Buffer);
+    fclose(IRFile);
+    fclose(outputELF);
 }
 
-static size_t TranslateConditionalJump(char* Arguments, FILE* elf)
+static size_t TranslateConditionalJump(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -127,7 +154,7 @@ static size_t TranslateConditionalJump(char* Arguments, FILE* elf)
     return LocalBufferIndex;
 }
 
-static size_t TranslateLabel(char* Arguments, FILE* elf)
+static size_t TranslateLabel(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -156,7 +183,7 @@ static size_t TranslateLabel(char* Arguments, FILE* elf)
     return LocalBufferIndex;
 }
 
-static size_t TranslateReturn(char* Arguments, FILE* elf)
+static size_t TranslateReturn(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -173,7 +200,7 @@ static size_t TranslateReturn(char* Arguments, FILE* elf)
                 "\tpush rbx\n"
                 );
     
-    while(Arguments[LocalBufferIndex] != '\n');
+    while(Arguments[LocalBufferIndex] != '\n')
     {
         LocalBufferIndex++;
     }
@@ -181,7 +208,7 @@ static size_t TranslateReturn(char* Arguments, FILE* elf)
     return LocalBufferIndex;
 }
 
-static size_t TranslateFunctionBody(char* Arguments, FILE* elf)
+static size_t TranslateFunctionBody(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -224,12 +251,17 @@ static size_t TranslateFunctionBody(char* Arguments, FILE* elf)
                 "\tmov rbp, r1\n"
                 , LocalVariablesNumber - ArgumentsNumber, LocalVariablesNumber);
     
-    LocalBufferIndex += 2;
+    LocalBufferIndex += 3;
 
+    strncpy(CurrentFunction->Label, FunctionLabel, strlen(FunctionLabel));
+    CurrentFunction->NumberOfArguments = (size_t)ArgumentsNumber;
+    CurrentFunction->NumberOfLocalVariables = (size_t)LocalVariablesNumber;
+
+    fprintf(stderr, "\n%s\n", Arguments + LocalBufferIndex);
     return LocalBufferIndex;
 }
 
-static size_t TranslateFunctionCall(char* Arguments, FILE* elf)
+static size_t TranslateFunctionCall(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -279,10 +311,129 @@ static size_t GetNumberDigits(int Number)
     return Digits;
 }
 
-static size_t TranslateAssignment(char* Arguments, FILE* elf)
+static size_t TranslateAssignment(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
+
+    assert(*Arguments == '(');
+    
+    size_t LocalBufferIndex = 1;
+
+    char OperandType[TRANSLATOR_FUNCTION_LABEL_NAME_MAX] = {};
+    for(size_t i = 0; i < TRANSLATOR_FUNCTION_LABEL_NAME_MAX; i++)
+    {
+        if(isdigit(Arguments[LocalBufferIndex + i]))
+        {
+            OperandType[i] = '\0';
+            LocalBufferIndex += i;
+            break;
+        }
+        OperandType[i] = Arguments[LocalBufferIndex + i];
+    }
+
+    if(strcmp(OperandType, "tmp") == 0)
+    {
+        while(Arguments[LocalBufferIndex] != ' ')
+        {
+            LocalBufferIndex++;
+        }
+        LocalBufferIndex++;
+
+        if(isalpha(Arguments[LocalBufferIndex]))
+        {
+            while(isdigit(Arguments[LocalBufferIndex]))
+            {
+                LocalBufferIndex++;
+            }
+
+            int LocalVariableIndex = atoi(Arguments);
+            LocalBufferIndex += GetNumberDigits(LocalVariableIndex);
+
+            fprintf(elf, 
+                        "\tpush [rbp + 8 * %d]\n", LocalVariableIndex);
+        }
+        else if(isdigit(Arguments[LocalBufferIndex]))
+        {
+            double NumericalValue = atof(Arguments);
+
+            LocalBufferIndex += GetFloatNumberDigits(Arguments);
+
+            char BinaryFloatRepresentation[sizeof(double) * 8 + 2] = {};
+
+            Get64ByteVariableBinaryString(&NumericalValue, BinaryFloatRepresentation);
+
+            fprintf(elf, "\tpush %s\n", BinaryFloatRepresentation);
+        }
+        else
+        {
+            assert(0);
+        }
+    }
+    else if(strcmp(OperandType, "var") == 0)
+    {
+        int LocalVarIndex = atoi(Arguments);
+        LocalBufferIndex += (size_t)GetNumberDigits(LocalBufferIndex);
+
+        while(Arguments[LocalBufferIndex] != ')')
+        {
+            LocalBufferIndex++;
+        }
+
+        LocalBufferIndex += 2;
+
+        fprintf(elf, 
+                    "\tpop r2\n"
+                    "\tmov [rbp + 8 * %d], r2\n", LocalVarIndex);
+    }
+    else
+    {
+        assert(0);
+    }
+
+    fprintf(stderr, "\n%s\n", Arguments + LocalBufferIndex);
+
+    return LocalBufferIndex;
+}
+
+static int Get64ByteVariableBinaryString(void* Variable, char* String)
+{
+    assert(Variable);
+    size_t Mask = 1;
+    for(size_t i = 0; i < 64; i++)
+    {
+        
+        String[i] = '0' + (char)((*(size_t*)(Variable) & Mask) << i);
+        Mask *= 2;;
+    }
+    String[64] = 'b';
+    String[65] = '\0';
+
+    return 0;
+}
+
+static size_t GetFloatNumberDigits(char* FloatNumberStr)
+{
+    assert(FloatNumberStr);
+
+    size_t Digits = 0;
+    while(FloatNumberStr[Digits] != '.' && FloatNumberStr[Digits] != ')')
+    {
+        Digits++;
+    }
+
+    if(FloatNumberStr[Digits] == '.')
+    {
+        Digits++;
+        while(isdigit(FloatNumberStr[Digits]))
+        {
+            Digits++;
+        }
+    }
+    
+
+
+    return Digits;
 }
 
 static int GetKeyWordCode(const char* IRStatement, size_t* BufferIndex)
@@ -296,11 +447,12 @@ static int GetKeyWordCode(const char* IRStatement, size_t* BufferIndex)
     const char KeyWord[KEY_WORD_NAME_MAX] = {};
 
     memcpy((void*)KeyWord, IRStatement, KeyWordSize);
+    fprintf(stderr, "Parsing key word: %s\n", KeyWord);
     
     int KeyWordIndex = -1;
-    for(int i = 0; i < kIR_KEY_WORD_NUMBER; i++)
+    for(int i = 0; i < (int)kIR_KEY_WORD_NUMBER; i++)
     {
-        if(strncmp(KeyWord, kIR_KEY_WORD_ARRAY[i], kIR_KEY_WORD_NAME_MAX))
+        if(strncmp(KeyWord, kIR_KEY_WORD_ARRAY[i], strlen(kIR_KEY_WORD_ARRAY[i])) == 0)
         {
             KeyWordIndex = i;
             break;

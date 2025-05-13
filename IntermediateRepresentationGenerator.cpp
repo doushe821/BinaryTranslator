@@ -38,6 +38,7 @@ static size_t GenerateOperationRepresentation(void* TreeNode, size_t* TemporalVa
 static size_t GenerateScopeRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
 static size_t GenerateConditionRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
 static size_t GenerateFunctionCallRepresentation(void* TreeNode, size_t* TemporalVariableIndex, size_t* LocalLabelIndex, FILE* IR_file, __attribute((unused))FunctionTable_t* FunctionTable);
+static size_t GenerateMainBodyRepresentation(void* TreeNode, FunctionTable_t* FunctionTable, int FunctionIndex, size_t* LocalLabelIndex, FILE* IR_file);
 
 static enum IrOpType SyntaxerOpCodesToPYAMConversion(int OpCode);
 
@@ -92,7 +93,7 @@ int GenerateIntermediateRepresentation(Tree_t* Tree, FunctionTable_t* FunctionTa
 
     size_t LocalLabelIndex = 0;
 
-    GenerateFunctionBodyRepresentation(MainBody, FunctionTable, MainIndex, &LocalLabelIndex, IR_file);
+    GenerateMainBodyRepresentation(MainBody, FunctionTable, MainIndex, &LocalLabelIndex, IR_file);
 
     for(size_t i = 0; i < NumberOfFunctions; i++)
     {
@@ -108,6 +109,44 @@ int GenerateIntermediateRepresentation(Tree_t* Tree, FunctionTable_t* FunctionTa
         memcpy(&TableIndex, GetNodeData(FunctionNode, DATA_FIELD_CODE, 0), sizeof(TableIndex));
         GenerateFunctionBodyRepresentation(FunctionNode, FunctionTable, (int)TableIndex, &LocalLabelIndex, IR_file);
     }
+
+    return 0;
+}
+
+static size_t GenerateMainBodyRepresentation(void* TreeNode, FunctionTable_t* FunctionTable, __attribute((unused))int FunctionIndex, size_t* LocalLabelIndex, FILE* IR_file)
+{
+    assert(TreeNode);
+    assert(FunctionTable);
+
+    size_t NodeType = 0;
+    memcpy(&NodeType, GetNodeData(TreeNode, TYPE_FIELD_CODE, 0), sizeof(NodeType));
+    if(NodeType != FUNCTION_BODY_NODE)
+    {
+        assert(0);
+    }  
+
+    void* FunctionArguments = NULL;
+    memcpy(&FunctionArguments, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 1), sizeof(void*));
+    assert(FunctionArguments);
+
+    void* FunctionBodyScope = NULL;
+    memcpy(&FunctionBodyScope, GetNodeData(TreeNode, DESCENDANTS_FIELD_CODE, 0), sizeof(void*));
+    assert(FunctionBodyScope);
+
+    size_t NumberOfArguments = 0;
+    memcpy(&NumberOfArguments, GetNodeData(FunctionArguments, DATA_FIELD_CODE, 0), sizeof(NumberOfArguments));
+
+    //fprintf(IR_file, "FunctionBody(func_%d_%zu, %zu)\t# %s\n", FunctionIndex, NumberOfArguments, NumberOfArguments, FunctionTable->FunctionsArray[FunctionIndex].Name);
+    IR_MAIN_BODY_(NumberOfArguments);
+    size_t TemporalVariableIndex = 0;
+
+    for(size_t i = 0; i < NumberOfArguments; i++)
+    {
+        IR_TAKE_ARG_((long long int) TemporalVariableIndex, i, "");
+        TemporalVariableIndex++;
+    }
+
+    GenerateScopeRepresentation(FunctionBodyScope, &TemporalVariableIndex, LocalLabelIndex, IR_file, FunctionTable);
 
     return 0;
 }
@@ -141,7 +180,7 @@ static size_t GenerateFunctionBodyRepresentation(void* TreeNode, FunctionTable_t
 
     for(size_t i = 0; i < NumberOfArguments; i++)
     {
-        IR_TAKE_ARG_((long long int) TemporalVariableIndex, i);
+        IR_TAKE_ARG_((long long int) TemporalVariableIndex, i, "");
         TemporalVariableIndex++;
     }
 

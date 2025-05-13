@@ -1,12 +1,6 @@
-float Mult(float a)
-{
-    return a * a;
-}
-
 int main()
 {
     float a = 0;
     float b = 0;
-    Mult(a);
-    return a * b;
+    return a;
 }

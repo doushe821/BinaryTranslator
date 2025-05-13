@@ -1,20 +1,8 @@
 
-Gyat(func_4_0, 0, 2)	# main
+Gyat(main, 0, 0)	# implement main
 	Gnoming(tmp0, 0)
 	Gnoming(var0, tmp0)	# Variable: 
 	Gnoming(tmp1, 0)
 	Gnoming(var1, tmp1)	# Variable: 
 	Gnoming(tmp2, var0)	 # 
-	Gnoming(arg0, tmp2)
-	RingRing(tmp3, func_3_1)	# 
-	Gnoming(tmp4, var0)	 # 
-	Gnoming(tmp5, var1)	 # 
-	Digging(tmp6, 3, tmp4, tmp5)	# IR_OP_TYPE_MUL
-	Cherepovec(tmp6)
-
-Gyat(func_3_1, 1, 1)	# Mult
-	Gnoming(var0, arg0)
-	Gnoming(tmp1, var0)	 # 
-	Gnoming(tmp2, var0)	 # 
-	Digging(tmp3, 3, tmp1, tmp2)	# IR_OP_TYPE_MUL
-	Cherepovec(tmp3)
+	Cherepovec(tmp2)
