@@ -6,8 +6,6 @@
 
 #include <assert.h>
 
-int AddSystemFunctionsToTable(FunctionTable_t* FunctionTable);
-
 int main()
 {
     FILE* fp = fopen("TokenizerTest.txt", "r+b");
@@ -60,8 +58,6 @@ int main()
         return -1;
     }
 
-    AddSystemFunctionsToTable(&FunctionTable);
-
     size_t TokenIndex = 0;
     GetProgram(&Tree, TokenTable, &TokenIndex, VariableTablesList, &FunctionTable);
 
@@ -93,19 +89,4 @@ int main()
     free(TokenTable);
     return 0;
     
-}
-
-int AddSystemFunctionsToTable(FunctionTable_t* FunctionTable)
-{
-    assert(FunctionTable);
-
-    for(size_t i = 0; i < kIR_SYS_CALL_NUMBER; i++)
-    {
-        Function_t Function = {};
-        strncpy(Function.Name, kIR_SYS_CALL_ARRAY[i].Name, kIR_SYS_CALL_NAME_MAX);
-        Function.NumberOfArguments = (size_t)kIR_SYS_CALL_ARRAY[i].NumberOfArguments;
-        FunctionTable->FunctionsArray[i] = Function;
-        (FunctionTable->Free)++;
-    }
-    return 0;
 }

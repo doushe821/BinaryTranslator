@@ -79,14 +79,21 @@ int NodeDump(const void* Node, FILE* Out)
 {
     assert(Out);
     assert(Node);
-    fprintf(stderr, "shit and giggle\n");
     size_t NodeType = *(size_t*)((char*)Node + CalculateByteShift(Node, TYPE_FIELD_CODE));
-    fprintf(stderr, "Node type = %zu\n", NodeType);
 
     fprintf(Out, "\"label\" = \"{<adr> Node Address =  %p|<value> ", Node);
 
     switch(NodeType)
     {
+        case SYSTEM_FUNCTION_CALL_NODE:
+        {
+            int Index = 0;
+            memcpy(&Index, GetNodeData(Node, DATA_FIELD_CODE, 0), sizeof(Index));
+            fprintf(Out, "%s|", kIR_SYS_CALL_ARRAY[Index].Name);
+            PrintDescendants(Node, Out);
+            fprintf(Out, "}\"\ncolor=\"black\"\nfillcolor=\"#FAE7B5\"\n");
+            break;    
+        }
         case RETURN_NODE:
         {
             fprintf(Out, "Return|");

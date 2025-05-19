@@ -4,6 +4,7 @@
 #include "Tree/Tree.h"
 #include "Syntax.h"
 #include "CompilerTables.h"
+#include "IntermediateRepresentationGenerator.h"
 
 static const size_t ATL_BASE_NODE_SIZE = 32;
 

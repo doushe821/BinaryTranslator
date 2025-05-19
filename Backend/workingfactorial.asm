@@ -54,8 +54,8 @@ main:
 ;	add r10, 8 * 1
 ;	mov rbp, r10
 
-	mov rax, 0x4014000000000000
-	;mov rax, 0x3FF0000000000000
+	;mov rax, 0x4014000000000000
+	mov rax, 0x3FF0000000000000
 	push rax
 
 	pop r8 ; assigning value to variable
@@ -68,9 +68,8 @@ main:
 
 	call func_0_1
 	add rsp, 8 ; 8 * argnum
-	push rax
-	call out
-	add rsp, 8
+
+	;call out
  ; function call	push ra
 	mov rax, 0000000000000000000000000000000000000000000000000000000000000000b
 	push rax
@@ -225,7 +224,6 @@ label0:
 	movq [rsp], xmm1
 
 	call func_0_1
-	add rsp, 8 ; (8 * argnum)
  ; function call
  	push rax
 
@@ -282,50 +280,24 @@ label0:
 
 
 out:
-	;pop rax
-	;sub rsp, 72
-	;push rbp
-	;mov rbp, rsp
-	;add rbp, 80
-	;push rbx
-	;push rcx
-	;push rdx
-	;push rdi
-	;push rsi
-	;push r9
-	;mov r9, rax
-	;mov rdi, rbp
-	;sub rdi, 1
-	;mov qword rax, [rbp]
-
-	sub rsp, 72 ; (lvn + an)
+	pop rax
+	sub rsp, 72
+	push rbp
+	mov rbp, rsp
+	add rbp, 80
 	push rbx
 	push rcx
 	push rdx
 	push rdi
 	push rsi
-	push r8
 	push r9
-	push r10
-	push rbp
-
-	mov rcx, rsp
-	add rcx, 136; (pushed registers + lnvn +an - 1)
-	mov rbp, rcx
-
-	mov rbx, [rbp + 16] ; rbp + (an - n + 1) * 8 (if has arguments)
-	mov [rbp + 0], rbx ; rbp + argnum
-
-	mov r8, rcx
-
+	mov r9, rax
 	mov rdi, rbp
 	sub rdi, 1
 	mov qword rax, [rbp]
 
-
 	mov rbx, 01h
 	mov rdx, rax
-	xor rcx, rcx
 	mov rcx, 64
 	mov byte [rdi], 0x0A
 	dec rdi
@@ -346,32 +318,16 @@ llPrintingLoopEnd:
 	mov rdi, 0x01
 	mov rdx, 66
 	syscall
-
-
-;	sub rbp, 8
-;	mov [rbp], r9
-;	pop r9
-;	pop rsi
-;	pop rdi
-;	pop rdx
-;	pop rcx
-;	pop rbx
-;	pop rbp
-;	add rsp, 72
-;	ret
-
-	pop rbp
-	pop r10
+	sub rbp, 8
+	mov [rbp], r9
 	pop r9
-	pop r8
 	pop rsi
 	pop rdi
 	pop rdx
 	pop rcx
 	pop rbx
-
-	add rsp, 72 ; (8 * (lvn + an))
-
+	pop rbp
+	add rsp, 72
 	ret
 
 halt:

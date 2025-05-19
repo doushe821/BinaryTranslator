@@ -72,6 +72,7 @@ enum ATLNodeTypes
     FUNCTION_CALL_NODE,
     COMPARISON_OPERAND_NODE,
     RETURN_NODE,
+    SYSTEM_FUNCTION_CALL_NODE,
 };
 
 union VariableData_u
