@@ -7,22 +7,6 @@ _start:
 
 
 main:
-	;pop rax
-	;sub rsp, 8 - 8 ; 8 * (local variable number - argument number)
-	;push rbx
-	;push rcx
-	;push rdx
-	;push rdi
-	;push rsi
-	;push r8
-	;push r9
-	;push r10
-	;push rbp
-	;mov rcx, rsp ; old rsp
-	;add rcx, 64 ; 64 + 8 * vln
-	;mov rbp, rcx ; stack frame start
-	;add rbp, 8
-	;mov rbx, rax ; rip
 
 	sub rsp, 8 ; (lvn + an)
 	push rbx
@@ -43,19 +27,7 @@ main:
 	;mov [rbp], rbx ; rbp + argnum
 
 
-
-
-
-;	mov rcx, rsp ; stack frame cration
-;	pop rbx
-;	sub rsp, 8 * 1
-;	push rbp
-;	mov r10, rsp
-;	add r10, 8 * 1
-;	mov rbp, r10
-
-	;mov rax, 0x4014000000000000
-	mov rax, 0x3FF0000000000000
+	mov rax, 0x4014000000000000
 	push rax
 
 	pop r8 ; assigning value to variable
@@ -68,8 +40,10 @@ main:
 
 	call func_0_1
 	add rsp, 8 ; 8 * argnum
-
-	;call out
+	push rax
+    
+	call out
+	add rsp, 8
  ; function call	push ra
 	mov rax, 0000000000000000000000000000000000000000000000000000000000000000b
 	push rax
@@ -89,43 +63,9 @@ main:
 	add rsp, 8 ; (8 * (lvn + an))
 
 	ret
-; ; return	pop rbp
-;	mov rsp, r10
-;	pop rcx
-;	push rbx
-;	ret
-;
-	;mov [rcx], rbx ; restored stack
-	;pop rbp
-	;pop r10
-	;pop r9
-	;pop r8
-	;pop rsi
-	;pop rdi
-	;pop rdx
-	;pop rcx
-	;pop rbx
-	;add rsp, 8
 	ret
 
 func_0_1:
-;	pop rax
-;	sub rsp, 8 - 8; 8 * local variable number
-;	push rbx
-;	push rcx
-;	push rdx
-;	push rdi
-;	push rsi
-;	push r8
-;	push r9
-;	push r10
-;	push rbp
-;	mov rcx, rsp ; old rsp
-;	add rcx, 64 ; 64 + 8 * vln
-;	mov rbp, rcx ; stack frame start
-;	add rbp, 8 ; 
-;	mov rbx, rax ; rip
-
 
 	sub rsp, 8 ; (lvn + an)
 	push rbx
@@ -143,16 +83,7 @@ func_0_1:
 	mov rbp, rcx
 
 	mov rbx, [rbp + 16] ; rbp + (an - n + 1) * 8 (if has arguments)
-	mov [rbp + 0], rbx ; rbp + argnum
-
-
-;	mov rcx, rsp ; stack frame cration
-;	pop rbx
-;	sub rsp, 8 * 0
-;	push rbp
-;	mov r10, rsp
-;	add r10, 8 * 1
-;	mov rbp, r10
+	mov [rbp - 0], rbx ; rbp - argIndex
 
 	mov r8, [rbp + 8 * 0]
 	push r8
@@ -192,18 +123,6 @@ func_0_1:
 	add rsp, 8 ; (8 * (lvn + an))
 
 	ret
-	;mov [rcx], rbx ; restored stack
-	;pop rbp
-	;pop r10
-	;pop r9
-	;pop r8
-	;pop rsi
-	;pop rdi
-	;pop rdx
-	;pop rcx
-	;pop rbx
-	;;add rsp, 8
-	;ret
 
 label0:
 	mov r8, [rbp + 8 * 0]
@@ -224,6 +143,7 @@ label0:
 	movq [rsp], xmm1
 
 	call func_0_1
+	add rsp, 8 ; (8 * argnum)
  ; function call
  	push rax
 
@@ -250,54 +170,37 @@ label0:
 	add rsp, 8 ; (8 * (lvn + an))
 
 	ret
-	;pop rbp
-	;pop r10
-	;pop r9
-	;pop r8
-	;pop rsi
-	;pop rdi
-	;pop rdx
-	;pop rcx
-	;pop rbx
-;
-	;add rsp, 8 ; (8 * (lvn + an))
-;
-	;ret
-
-;	mov [rcx], rbx ; restored stack
-;
-;	pop rbp
-;	pop r10
-;	pop r9
-;	pop r8
-;	pop rsi
-;	pop rdi
-;	pop rdx
-;	pop rcx
-;	pop rbx
-;	;add rsp, 8
-;	ret
-
 
 out:
-	pop rax
-	sub rsp, 72
-	push rbp
-	mov rbp, rsp
-	add rbp, 80
+
+	sub rsp, 72 ; (lvn + an)
 	push rbx
 	push rcx
 	push rdx
 	push rdi
 	push rsi
+	push r8
 	push r9
-	mov r9, rax
+	push r10
+	push rbp
+
+	mov rcx, rsp
+	add rcx, 136; (pushed registers + lnvn +an - 1)
+	mov rbp, rcx
+
+	mov rbx, [rbp + 16] ; rbp + (an - n + 1) * 8 (if has arguments)
+	mov [rbp + 0], rbx ; rbp + argnum
+
+	mov r8, rcx
+
 	mov rdi, rbp
 	sub rdi, 1
 	mov qword rax, [rbp]
 
+
 	mov rbx, 01h
 	mov rdx, rax
+	xor rcx, rcx
 	mov rcx, 64
 	mov byte [rdi], 0x0A
 	dec rdi
@@ -318,16 +221,19 @@ llPrintingLoopEnd:
 	mov rdi, 0x01
 	mov rdx, 66
 	syscall
-	sub rbp, 8
-	mov [rbp], r9
+
+	pop rbp
+	pop r10
 	pop r9
+	pop r8
 	pop rsi
 	pop rdi
 	pop rdx
 	pop rcx
 	pop rbx
-	pop rbp
-	add rsp, 72
+
+	add rsp, 72 ; (8 * (lvn + an))
+
 	ret
 
 halt:

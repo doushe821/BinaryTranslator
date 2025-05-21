@@ -10,7 +10,7 @@ float factorial(float num)
 
 int main()
 {
-    float a = 5;
+    float a = in(a);
     out(factorial(a));
     return 0;
 }

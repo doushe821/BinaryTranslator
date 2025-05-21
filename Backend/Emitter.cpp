@@ -1,3 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "Emitter.h"
+#include "Backend.h"
+
 #include "Backend.h"
 #include "../FileBufferizer/FileBufferizer.h"
 
@@ -10,13 +17,13 @@ static size_t GetNumberDigits(int Number);
 static int GetKeyWordCode(const char* IRStatement, size_t* BufferIndex);
 static int Get64ByteVariableBinaryString(void* Variable, char* String);
 
-static size_t TranslateAssignment(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
-static size_t TranslateFunctionCall(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
-static size_t TranslateFunctionBody(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
-static size_t TranslateReturn(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
-static size_t TranslateLabel(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
-static size_t TranslateConditionalJump(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
-static size_t TranslateOperation(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t EmmitAssignment(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t EmmitFunctionCall(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t EmmitFunctionBody(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t EmmitReturn(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t EmmitLabel(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t EmmitConditionalJump(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
+static size_t EmmitOperation(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction);
 
 
 static int SearchSystemCall(char* FunctionLabel);
@@ -68,7 +75,7 @@ int main()
         {
             case IR_FUNCTION_BODY_INDEX:
             {
-                i += TranslateFunctionBody(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitFunctionBody(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -77,7 +84,7 @@ int main()
             }
             case IR_FUNCTION_CALL_INDEX:
             {
-                i += TranslateFunctionCall(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitFunctionCall(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -86,7 +93,7 @@ int main()
             }
             case IR_ASSIGNMENT_INDEX:
             {
-                i += TranslateAssignment(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitAssignment(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -95,7 +102,7 @@ int main()
             }
             case IR_RETURN_INDEX:
             {
-                i += TranslateReturn(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitReturn(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -104,7 +111,7 @@ int main()
             }
             case IR_LABEL_INDEX:
             {
-                i += TranslateLabel(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitLabel(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -113,7 +120,7 @@ int main()
             }
             case IR_CONDITIONAL_JUMP_INDEX:
             {
-                i += TranslateConditionalJump(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitConditionalJump(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -122,7 +129,7 @@ int main()
             }
             case IR_OPERATION_INDEX:
             {
-                i += TranslateOperation(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitOperation(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -131,7 +138,7 @@ int main()
             }
             case IR_SYSTEM_FUNCTION_CALL_INDEX:
             {
-                i += TranslateFunctionCall(Buffer + i, outputELF, &CurrentFunction);
+                i += EmmitFunctionCall(Buffer + i, outputELF, &CurrentFunction);
                 while(*(Buffer + i) != '\n' && i < IRFileSize)
                 {
                     i++;
@@ -155,7 +162,7 @@ int main()
     fclose(outputELF);
 }
 
-static size_t TranslateConditionalJump(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
+static size_t EmmitConditionalJump(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -198,7 +205,7 @@ static size_t TranslateConditionalJump(char* Arguments, FILE* elf, __attribute((
     return LocalBufferIndex;
 }
 
-static size_t TranslateLabel(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
+static size_t EmmitLabel(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -227,7 +234,7 @@ static size_t TranslateLabel(char* Arguments, FILE* elf, __attribute((unused))Tr
     return LocalBufferIndex;
 }
 
-static size_t TranslateReturn(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
+static size_t EmmitReturn(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -253,7 +260,7 @@ static size_t TranslateReturn(char* Arguments, FILE* elf, __attribute((unused))T
     return LocalBufferIndex;
 }
 
-static size_t TranslateFunctionBody(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
+static size_t EmmitFunctionBody(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -334,7 +341,7 @@ static size_t TranslateFunctionBody(char* Arguments, FILE* elf, TranslatorFuncti
     return LocalBufferIndex;
 }
 
-static size_t TranslateFunctionCall(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
+static size_t EmmitFunctionCall(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -467,7 +474,7 @@ static size_t GetNumberDigits(int Number)
     return Digits;
 }
 
-static size_t TranslateAssignment(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
+static size_t EmmitAssignment(char* Arguments, FILE* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);
@@ -582,7 +589,7 @@ static size_t TranslateAssignment(char* Arguments, FILE* elf, __attribute((unuse
     return LocalBufferIndex;
 }
 
-static size_t TranslateOperation(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
+static size_t EmmitOperation(char* Arguments, FILE* elf, TranslatorFunction_t* CurrentFunction)
 {
     assert(Arguments);
     assert(elf);

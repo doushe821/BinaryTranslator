@@ -1,14 +1,17 @@
 
 Gyat(main, 0, 1)	# implement main
-	Gnoming(tmp0, 5)
-	Gnoming(var0, tmp0)	# Variable: 
-	Gnoming(tmp1, var0)	 # 
-	Gnoming(arg0, tmp1)
-	RingRing(tmp2, func_0_1)	# 
+	Gnoming(tmp0, var0)	 # 
+	Gnoming(arg0, tmp0)
+	Bobb(tmp1, in, 1)	# System function call: "in"
+	Gnoming(var0, tmp1)	# Variable: 
+	Gnoming(tmp2, var0)	 # 
 	Gnoming(arg0, tmp2)
-RingRing(tmp3, out, 1)	# System function call
-	Gnoming(tmp4, 0)
-	Cherepovec(tmp4)
+	RingRing(tmp3, func_0_1)	# 
+	Gnoming(tmp4, tmp3)
+	Gnoming(arg0, tmp4)
+	Bobb(tmp5, out, 1)	# System function call: "out"
+	Gnoming(tmp6, 0)
+	Cherepovec(tmp6)
 
 Gyat(func_0_1, 1, 1)	# factorial
 	Gnoming(var0, arg0)	 # Variable: 
@@ -25,5 +28,6 @@ Gyat(func_0_1, 1, 1)	# factorial
 	Digging(tmp4, 2, tmp2, tmp3)	# IR_OP_TYPE_SUB
 	Gnoming(arg0, tmp4)
 	RingRing(tmp5, func_0_1)	# 
-	Digging(tmp6, 3, tmp1, tmp0)	# IR_OP_TYPE_MUL
-	Cherepovec(tmp6)
+	Gnoming(tmp6, tmp5)
+	Digging(tmp7, 3, tmp1, tmp0)	# IR_OP_TYPE_MUL
+	Cherepovec(tmp7)

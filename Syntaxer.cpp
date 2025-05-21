@@ -204,7 +204,6 @@ static void* GetFunctionBody(const Tree_t* Tree, const TokenTable_t* TokenTable,
         VariableTable->Capacity = InitalArraySize;
         VariableTable->VariablesArray = (Variable_t*)calloc(InitalArraySize, sizeof(Variable_t));
         assert(VariableTable->VariablesArray);
-        fprintf(stderr, "### PUSHING IN VARABLE LIST\n");
         PushFront(VariableTablesList, &VariableTable);
 
         size_t FunctionIndex = FunctionTableAppend(FunctionTable, Function);
@@ -219,10 +218,7 @@ static void* GetFunctionBody(const Tree_t* Tree, const TokenTable_t* TokenTable,
         
         void* NewBranch = Tree->InitNode(Tree, FUNCTION_BODY_NODE, sizeof(FunctionIndex), &FunctionIndex, 2, GetScope(Tree, TokenTable, TokenIndex, VariableTablesList, FunctionTable), Arguments);
 
-        fprintf(stderr, "Token index before removal = %zu\n", *TokenIndex);
-        fprintf(stderr, "TOkentablelist free= %zu\n", VariableTablesList->free);
         VariableTable_t* RemovedTable = NULL;
-        fprintf(stderr, "### REMOVING VARIABLE TBLE\n");
         RemInd(VariableTablesList, &RemovedTable, VariableTablesList->free - 1);
         free(RemovedTable->VariablesArray);
         free(RemovedTable);
@@ -833,12 +829,10 @@ static int VariableTableListSearch(List_t* VariableTablesList, Variable_t Variab
 
     for(size_t i = VariableTablesList->free - 2; i > 0; i--)
     {
-        VariableTable_t* VariableTable = NULL;
         memcpy(&VariableTable, ListGetNodeValueInd(VariableTablesList, i), sizeof(void*));
-        int LocalIndex = VariableTableSearch(VariableTable, Variable);
+        LocalIndex = VariableTableSearch(VariableTable, Variable);
         if(LocalIndex >= 0)
         {
-            fprintf(stderr, "Variable name = %s\nVariable index = %d\nLocalIndex = %zu\nIndex = %d\n", Variable.Name, Index + LocalIndex, LocalIndex, Index);
             Index -= (int)VariableTable->Free;
 
             return Index + LocalIndex;
@@ -873,7 +867,6 @@ static int GetAbsoluteVariableIndexShift(List_t* VariableTablesList)
         VariableCounter += (int)VariableTable->Free;
     }   
 
-    fprintf(stderr, "Got absolute variable index shift = %zu\n", VariableCounter);
     return VariableCounter;
 }
 
