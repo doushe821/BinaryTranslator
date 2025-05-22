@@ -11,7 +11,7 @@
 
 
 static const size_t VARIABLE_NAME_MAX = 512;
-static const size_t KEY_WORD_NAME_MAX = 32;
+static const size_t KEY_WORD_NAME_MAX = 64;
 static const size_t KEY_WORD_NUMBER = 16;
 
 static const size_t TRANSLATOR_FUNCTION_LABEL_NAME_MAX = 32;
@@ -23,6 +23,19 @@ struct TranslatorFunction_t
     size_t NumberOfLocalVariables;
     char Label[TRANSLATOR_FUNCTION_LABEL_NAME_MAX];
 };
+
+struct BackendLabel
+{
+    char Name[KEY_WORD_NAME_MAX];
+    int Address;
+};
+
+struct BackendLabelTable
+{
+    BackendLabel* Labels;
+    size_t Capacity;
+    size_t Free;
+}
 
 const char* SystemCallOut = 
 {

@@ -83,6 +83,7 @@ enum EmitterMovModes
 enum OpCodeExtensions
 {
     emiSlashSevenExt = 0x38,
+    emiSlashFiveExt = 0x28,
 };
 
 union EmitterOperandData
@@ -137,13 +138,25 @@ enum EmitterOpCodes
     emiMulsdOpCode = 0x0f59,
     emiDivsdOpCode = 0x0f5e,
     emiMovsdOpCode = 0x0f10,
-    emiMovqOpCode = 0x0f7e
+    emiMovqOpCode = 0x0f7e,
+    emiNearJneOpCode = 0x0f85, 
+    emiSubImm32OpCode = 0x2D,
+    emiPushImm32OpCode = 0x68,
+    
 };
 
-int EmitRet(char* elf, size_t elfIndex);
-int EmitPop(int RegisterName, char* elf, size_t elfIndex);
-int EmitMov(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
-int EmitAdd(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
-int EmitPush(int RegisterName, char* elf, size_t elfIndex);
+size_t EmitPushImm32(int Value, char* elf, size_t elfIndex);
+size_t EmitSub(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitRet(char* elf, size_t elfIndex);
+size_t EmitPop(int RegisterName, char* elf, size_t elfIndex);
+size_t EmitMov(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitAdd(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitPush(int RegisterName, char* elf, size_t elfIndex);
+size_t EmitConditionalJump(int Operation, int Offset, char* elf, size_t elfIndex);
+size_t EmitMovq(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitMovsd(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitSSE2Ariphmetics(int Operation, EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitCmp(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitPop(int RegisterName, char* elf, size_t elfIndex);
 
 #endif
