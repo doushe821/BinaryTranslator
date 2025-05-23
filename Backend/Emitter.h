@@ -70,6 +70,7 @@ enum EmitterPrefixes
     emiREX = 0x49,
     emiSSE = 0xF2,
     emiSSE2 = 0xF3,
+    emiXMMtoMem = 0x66,
     
 };
 
@@ -85,6 +86,7 @@ enum OpCodeExtensions
 {
     emiSlashSevenExt = 0x38,
     emiSlashFiveExt = 0x28,
+    emiSIB = 0x24,
 };
 
 union EmitterOperandData
@@ -92,6 +94,7 @@ union EmitterOperandData
     int IntValue;
     double DoubleValue;
     u_int64_t Int64Value;
+    u_int8_t Int8Value;
 };
 
 struct EmitterOperand
@@ -122,18 +125,20 @@ enum EmitterOpCodes
     emiMov64bitRMOpCode = 0x89,
     emiPopOpCode = 0x58,
     emiRetOpCode = 0xC3,
-    emiAddsdOpCode = 0x0f58,
-    emiSubsdOpCode = 0x0f5c,
-    emiMulsdOpCode = 0x0f59,
-    emiDivsdOpCode = 0x0f5e,
-    emiMovsdOpCode = 0x0f10,
-    emiMovqOpCode = 0x0f7e,
-    emiNearJneOpCode = 0x0f85, 
+    emiAddsdOpCode = 0x580f,
+    emiSubsdOpCode = 0x5c0f,
+    emiMulsdOpCode = 0x590f,
+    emiDivsdOpCode = 0x5e0f,
+    emiMovsdOpCode = 0x100f,
+    emiMovqOpCode = 0x7e0f,
+    emiNearJneOpCode = 0x850f, 
    // emiSubImm32OpCode = 0x2D,
     emiPushImm32OpCode = 0x68,
     emiCallOpCode = 0xe8,
-    emiCmpsdOpCode = 0x0fc2,
+    emiCmpsdOpCode = 0xc20f,
     emiShr8bitOpCode = 0xc1,
+    emiMovMemRegOpCode = 0x8b,
+    emiStoreSSEOpCode = 0xd60f,
     
 };
 

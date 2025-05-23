@@ -1,6 +1,20 @@
+float factorial(float a)
+{
+    if(a == 1)
+    {
+        return a;
+    }
+
+    return a * factorial(a - 1);
+}
+
 int main()
 {
-    float a = 0;
-    float b = 5.5;
-    return a + b;
+    float a = 3;
+    float b = 5;
+    if(a > b)
+    {
+        return a;
+    }
+    return b;
 }

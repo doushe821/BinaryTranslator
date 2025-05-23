@@ -1,10 +1,34 @@
 
 Gyat(main, 0, 2)	# implement main
-	Gnoming(tmp0, 0)
+	Gnoming(tmp0, 3)
 	Gnoming(var0, tmp0)	# Variable: 
-	Gnoming(tmp1, 5.5)
+	Gnoming(tmp1, 5)
 	Gnoming(var1, tmp1)	# Variable: 
 	Gnoming(tmp2, var0)	 # 
 	Gnoming(tmp3, var1)	 # 
-	Digging(tmp4, 1, tmp2, tmp3)	# IR_OP_TYPE_SUM
+	Digging(tmp4, 10, tmp2, tmp3)	# IR_OP_TYPE_GREAT
+	Frog(label0, tmp4)	# If's condition
+	Gnoming(tmp5, var0)	 # 
+	Cherepovec(tmp5)
+	Viperr(label0)	# If's end
+	Gnoming(tmp2, var1)	 # 
+	Cherepovec(tmp2)
+
+Gyat(func_0_1, 1, 1)	# factorial
+	Gnoming(var0, arg0)	 # Variable: 
+	Gnoming(tmp1, var0)	 # 
+	Gnoming(tmp2, 1)
+	Digging(tmp3, 6, tmp1, tmp2)	# IR_OP_TYPE_EQ
+	Frog(label1, tmp3)	# If's condition
+	Gnoming(tmp4, var0)	 # 
 	Cherepovec(tmp4)
+	Viperr(label1)	# If's end
+	Gnoming(tmp1, var0)	 # 
+	Gnoming(tmp2, var0)	 # 
+	Gnoming(tmp3, 1)
+	Digging(tmp4, 2, tmp2, tmp3)	# IR_OP_TYPE_SUB
+	Gnoming(arg0, tmp4)
+	RingRing(tmp5, func_0_1)	# 
+	Gnoming(tmp6, tmp5)
+	Digging(tmp7, 3, tmp1, tmp0)	# IR_OP_TYPE_MUL
+	Cherepovec(tmp7)

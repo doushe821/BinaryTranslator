@@ -105,7 +105,7 @@ int CreateElf(size_t TextSize, void* Text)
 
     memcpy(elfFile.sectionText, Text, TextSize);
 
-    FILE* elfOut = fopen("VovaGay", "w+b");
+    FILE* elfOut = fopen("Test", "w+b");
     assert(elfOut);
 
     fwrite(&elfFile, sizeof(elfFile.elfHeader) + sizeof(elfFile.elfProgHeader), 1, elfOut);

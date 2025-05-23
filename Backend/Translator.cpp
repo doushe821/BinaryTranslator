@@ -564,8 +564,8 @@ static size_t TranslateFunctionBody(char* Arguments, char* elf, TranslatorFuncti
     (*ip) += EmitPush(emi_rdx, elf, *ip);
     (*ip) += EmitPush(emi_rdi, elf, *ip);
     (*ip) += EmitPush(emi_rsi, elf, *ip);
-    (*ip) += EmitPush(emi_r8, elf, *ip);
-    (*ip) += EmitPush(emi_r9, elf, *ip);
+    (*ip) += EmitPush(emi_r8 , elf, *ip);
+    (*ip) += EmitPush(emi_r9 , elf, *ip);
     (*ip) += EmitPush(emi_r10, elf, *ip);
     (*ip) += EmitPush(emi_rbp, elf, *ip);
 
@@ -580,11 +580,12 @@ static size_t TranslateFunctionBody(char* Arguments, char* elf, TranslatorFuncti
 
     Op2 = {};
     Op2.Type = emiIntValueOperand;
-    Op2.Data.IntValue = 72 + (LocalVariablesNumber - 1);
+    Op2.Data.IntValue = 72 + 8 * (LocalVariablesNumber - 1);
     (*ip) += EmitAdd(Op1, Op2, elf, *ip);
 
     Op1.Data.IntValue = emi_rbp;
     Op2.Data.IntValue = emi_rcx;
+    Op2.Type = emiRegisterOperand;
     (*ip) += EmitMov(Op1, Op2, elf, *ip);
 
     if(ArgumentsNumber > 0)
@@ -832,16 +833,17 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
             LocalBufferIndex += GetNumberDigits(LocalVariableIndex);
 
             //fprintf(elf, 
-            //            "\tmov r8, [rbp + 8 * %d]\n"
-            //            "\tpush r8\n\n", LocalVariableIndex);
+            //            "\tmov rax, [rbp + 8 * %d]\n"
+            //            "\tpush rax\n\n", LocalVariableIndex);
             EmitterOperand Op1 = {};
             Op1.Type = emiRegisterOperand;
-            Op1.Data.IntValue = emi_r8;
+            Op1.Data.IntValue = emi_rax;
             EmitterOperand Op2 = {};
             Op2.Type = emiMemoryOperand;
             Op2.Data.IntValue = emi_rbp;
-            Op2.MemoryShift = 8 * LocalVariableIndex;
+            Op2.MemoryShift = - 8 * (LocalVariableIndex);
             (*ip) += EmitMov(Op1, Op2, elf, *ip);
+            (*ip) += EmitPush(emi_rax, elf, *ip);
         }
         else if(isdigit(Arguments[LocalBufferIndex]))
         {
@@ -861,6 +863,7 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
             Op2.Type = emiDoubleValueOperand;
             Op2.Data.DoubleValue = NumericalValue;
             (*ip) += EmitMov(Op1, Op2, elf, *ip);
+            (*ip) += EmitPush(emi_rax, elf, *ip);
         }
         else
         {
@@ -892,7 +895,7 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
             //    "\tmov rdi, rbp\n"
             //    "\tadd rdi, 8 * %d\n"
             //    "\tmov [rdi], r8\n\n", LocalVarIndex);
-            (*ip) += EmitPop(emi_r8, elf, *ip);
+            (*ip) += EmitPop(emi_rax, elf, *ip);
             EmitterOperand Op1 = {};
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_rdi;
@@ -902,13 +905,13 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
             (*ip) += EmitMov(Op1, Op2, elf, *ip);
             Op2.Type = emiIntValueOperand;
             Op2.Data.IntValue = 8 * LocalVarIndex;
-            (*ip) += EmitAdd(Op1, Op2, elf, *ip);
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
 
             Op1.Type = emiMemoryOperand;
             Op1.Data.IntValue = emi_rdi;
             Op1.MemoryShift = 0;
             Op2.Type = emiRegisterOperand;
-            Op2.Data.IntValue = emi_r8;
+            Op2.Data.IntValue = emi_rax;
             (*ip) += EmitMov(Op1, Op2, elf, *ip);
 
 
@@ -1004,6 +1007,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tmulsd xmm1, xmm0 ; multiplication\n"
             //            "\tsub rsp, 8\n"
             //            "\tmovq [rsp], xmm1\n\n");
+            Op1.Data.IntValue = emi_xmm1;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitSSE2Ariphmetics(emiMulsdOpCode, Op1, Op2, elf, *ip);
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_rsp;
@@ -1024,6 +1029,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tdivsd xmm1, xmm0 ; division\n"
             //            "\tsub rsp, 8\n"
             //            "\tmovq [rsp], xmm1\n\n");
+            Op1.Data.IntValue = emi_xmm1;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitSSE2Ariphmetics(emiDivsdOpCode, Op1, Op2, elf, *ip);
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_rsp;
@@ -1037,7 +1044,6 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             Op2.Data.IntValue = emi_xmm1;
             (*ip) += EmitMovq(Op1, Op2, elf, *ip);
             break;
-            break;
         }
         case IR_OP_TYPE_EQ:
         {
@@ -1048,18 +1054,30 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tpop r8\n"
             //            "\tshr r8, 31\n"
             //            "\tpush r8\n\n");
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitCmpsd(emiGreater, Op1, Op2, elf, *ip);
+
             Op1.Type = emiMemoryOperand;
             Op1.Data.IntValue = emi_rsp;
             Op1.MemoryShift = 0;
             Op2.Type = emiRegisterOperand;
             Op2.Data.IntValue = emi_xmm1;
             (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+
             Op1.Type = emiRegisterOperand;
             Op2.Type = emiIntValueOperand;
             Op2.Data.IntValue = 8;
             (*ip) += EmitSub(Op1, Op2, elf, *ip);
-            (*ip) += EmitPop(emi_r8, elf, *ip);
-            
+
+            (*ip) += EmitPop(emi_rax, elf, *ip);
+            Op1.Data.IntValue = emi_rax;
+            Op2.Data.IntValue = 31;
+            (*ip) += EmitShr(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPush(emi_rax, elf, *ip);
             break;
         }
         case IR_OP_TYPE_GREAT:
@@ -1073,8 +1091,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tpush r8\n\n");
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_xmm1;
-            Op1.Type = emiRegisterOperand;
-            Op1.Data.IntValue = emi_xmm1;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitCmpsd(emiGreater, Op1, Op2, elf, *ip);
 
             Op1.Data.IntValue = emi_rsp;
@@ -1088,13 +1106,13 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             Op2.Data.IntValue = 8;
             (*ip) += EmitSub(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPop(emi_r8, elf, *ip);
+            (*ip) += EmitPop(emi_rax, elf, *ip);
 
-            Op1.Data.IntValue = emi_r8;
+            Op1.Data.IntValue = emi_rax;
             Op2.Data.IntValue = 31;
             (*ip) += EmitShr(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPush(emi_r8, elf, *ip);
+            (*ip) += EmitPush(emi_rax, elf, *ip);
             break;
         }
         case IR_OP_TYPE_GREATEQ:
@@ -1108,8 +1126,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tpush r8\n\n");
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_xmm1;
-            Op1.Type = emiRegisterOperand;
-            Op1.Data.IntValue = emi_xmm1;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitCmpsd(emiGreaterOrEqual, Op1, Op2, elf, *ip);
 
             Op1.Data.IntValue = emi_rsp;
@@ -1123,13 +1141,13 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             Op2.Data.IntValue = 8;
             (*ip) += EmitSub(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPop(emi_r8, elf, *ip);
+            (*ip) += EmitPop(emi_rax, elf, *ip);
 
-            Op1.Data.IntValue = emi_r8;
+            Op1.Data.IntValue = emi_rax;
             Op2.Data.IntValue = 31;
             (*ip) += EmitShr(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPush(emi_r8, elf, *ip);
+            (*ip) += EmitPush(emi_rax, elf, *ip);
             break;
         }
         case IR_OP_TYPE_LESS:
@@ -1143,8 +1161,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tpush r8\n\n");
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_xmm1;
-            Op1.Type = emiRegisterOperand;
-            Op1.Data.IntValue = emi_xmm1;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitCmpsd(emiLessThan, Op1, Op2, elf, *ip);
 
             Op1.Data.IntValue = emi_rsp;
@@ -1158,13 +1176,13 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             Op2.Data.IntValue = 8;
             (*ip) += EmitSub(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPop(emi_r8, elf, *ip);
+            (*ip) += EmitPop(emi_rax, elf, *ip);
 
-            Op1.Data.IntValue = emi_r8;
+            Op1.Data.IntValue = emi_rax;
             Op2.Data.IntValue = 31;
             (*ip) += EmitShr(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPush(emi_r8, elf, *ip);
+            (*ip) += EmitPush(emi_rax, elf, *ip);
             break;
         }
         case IR_OP_TYPE_LESSEQ:
@@ -1178,8 +1196,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tpush r8\n\n");
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_xmm1;
-            Op1.Type = emiRegisterOperand;
-            Op1.Data.IntValue = emi_xmm1;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitCmpsd(emiLessThanOrEqual, Op1, Op2, elf, *ip);
 
             Op1.Data.IntValue = emi_rsp;
@@ -1193,13 +1211,13 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             Op2.Data.IntValue = 8;
             (*ip) += EmitSub(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPop(emi_r8, elf, *ip);
+            (*ip) += EmitPop(emi_rax, elf, *ip);
 
-            Op1.Data.IntValue = emi_r8;
+            Op1.Data.IntValue = emi_rax;
             Op2.Data.IntValue = 31;
             (*ip) += EmitShr(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPush(emi_r8, elf, *ip);
+            (*ip) += EmitPush(emi_rax, elf, *ip);
             break;
         }
         case IR_OP_TYPE_NEQ:
@@ -1213,8 +1231,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tpush r8\n\n");
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_xmm1;
-            Op1.Type = emiRegisterOperand;
-            Op1.Data.IntValue = emi_xmm1;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitCmpsd(emiNotEqual, Op1, Op2, elf, *ip);
 
             Op1.Data.IntValue = emi_rsp;
@@ -1228,13 +1246,13 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             Op2.Data.IntValue = 8;
             (*ip) += EmitSub(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPop(emi_r8, elf, *ip);
+            (*ip) += EmitPop(emi_rax, elf, *ip);
 
-            Op1.Data.IntValue = emi_r8;
+            Op1.Data.IntValue = emi_rax;
             Op2.Data.IntValue = 31;
             (*ip) += EmitShr(Op1, Op2, elf, *ip);
 
-            (*ip) += EmitPush(emi_r8, elf, *ip);
+            (*ip) += EmitPush(emi_rax, elf, *ip);
             break;
         }
         case IR_OP_TYPE_SUB:
@@ -1243,6 +1261,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\tsubsd xmm1, xmm0 ; substraction\n"
             //            "\tsub rsp, 8\n"
             //            "\tmovq [rsp], xmm1\n\n");
+            Op1.Data.IntValue = emi_xmm1;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitSSE2Ariphmetics(emiSubsdOpCode, Op1, Op2, elf, *ip);
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_rsp;
@@ -1263,6 +1283,8 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             //            "\taddsd xmm1, xmm0 ; sum\n"
             //            "\tsub rsp, 8\n"
             //            "\tmovq [rsp], xmm1\n\n");
+            Op1.Data.IntValue = emi_xmm1;
+            Op2.Data.IntValue = emi_xmm0;
             (*ip) += EmitSSE2Ariphmetics(emiAddsdOpCode, Op1, Op2, elf, *ip);
             Op1.Type = emiRegisterOperand;
             Op1.Data.IntValue = emi_rsp;
@@ -1275,7 +1297,6 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
             Op2.Type = emiRegisterOperand;
             Op2.Data.IntValue = emi_xmm1;
             (*ip) += EmitMovq(Op1, Op2, elf, *ip);
-            break;
             break;
         }
         default:
