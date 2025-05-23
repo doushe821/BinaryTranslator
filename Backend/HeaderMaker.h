@@ -1,4 +1,0 @@
-#ifndef HEADER_MAKER_H_INCLUDED
-#define HEADER_MAKE_H_INCLUDED
-
-#endif

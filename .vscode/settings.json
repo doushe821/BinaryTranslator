@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "emits": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

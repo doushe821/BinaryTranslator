@@ -67,6 +67,7 @@ enum EmitterPrefixes
 {
     emiREX_B = 0x41,
     emiREX_W = 0x48,
+    emiREX = 0x49,
     emiSSE = 0xF2,
     emiSSE2 = 0xF3,
     
@@ -111,23 +112,11 @@ enum EmitterOperandTypes
 const size_t InstructionNameMax = 16;
 const size_t InstructionsNumber = 16;
 
-//struct x86_64InstructionOpCode
-//{
-//    char Name[InstructionNameMax];
-//    int Prefix;
-//    int OpCode;
-//    int OperandNumber;
-//};
-//
-//x86_64InstructionOpCode emiInstructionArray[InstructionsNumber] = 
-//{
-//    {"push", }
-//};
-
 enum EmitterOpCodes
 {
     emiPushOpCode = 0x50,
     emiAddImm32OpCode = 0x81,
+    emiSubImm32OpCode = 0x83,
     emiMov64bitOpCode = 0x89,
     emiMov64bitImmOpCode = 0xb8,
     emiMov64bitRMOpCode = 0x89,
@@ -140,11 +129,28 @@ enum EmitterOpCodes
     emiMovsdOpCode = 0x0f10,
     emiMovqOpCode = 0x0f7e,
     emiNearJneOpCode = 0x0f85, 
-    emiSubImm32OpCode = 0x2D,
+   // emiSubImm32OpCode = 0x2D,
     emiPushImm32OpCode = 0x68,
+    emiCallOpCode = 0xe8,
+    emiCmpsdOpCode = 0x0fc2,
+    emiShr8bitOpCode = 0xc1,
     
 };
 
+enum ComparisonTypes
+{
+    emiEqual = 0x0,
+    emiLessThan,
+    emiLessThanOrEqual,
+    emiNotEqual,
+    emiGreaterOrEqual,
+    emiGreater,
+
+};
+
+size_t EmitShr(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitCmpsd(int ComparisonMode, EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
+size_t EmitCall(int Shift, char* elf, size_t elfIndex);
 size_t EmitPushImm32(int Value, char* elf, size_t elfIndex);
 size_t EmitSub(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
 size_t EmitRet(char* elf, size_t elfIndex);
@@ -157,6 +163,5 @@ size_t EmitMovq(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, siz
 size_t EmitMovsd(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
 size_t EmitSSE2Ariphmetics(int Operation, EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
 size_t EmitCmp(EmitterOperand Operand1, EmitterOperand Operand2, char* elf, size_t elfIndex);
-size_t EmitPop(int RegisterName, char* elf, size_t elfIndex);
 
 #endif

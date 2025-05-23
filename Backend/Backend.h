@@ -35,7 +35,7 @@ struct BackendLabelTable
     BackendLabel* Labels;
     size_t Capacity;
     size_t Free;
-}
+};
 
 const char* SystemCallOut = 
 {

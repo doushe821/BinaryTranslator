@@ -4,6 +4,7 @@
 
 #include "Emitter.h"
 #include "Backend.h"
+#include "ElfCreator.h"
 
 #include "Backend.h"
 #include "../FileBufferizer/FileBufferizer.h"
@@ -16,6 +17,8 @@ static size_t GetNumberDigits(int Number);
 
 static int GetKeyWordCode(const char* IRStatement, size_t* BufferIndex);
 static int Get64ByteVariableBinaryString(void* Variable, char* String);
+
+static int CheckLabelTable(BackendLabelTable* LabelTable);
 
 static int LabelTableAppend(BackendLabelTable* LabelTable, char* Name, int Address);
 static int LabelTableSearch(BackendLabelTable* LabelTable, char* Name);
@@ -31,7 +34,7 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
 
 static int SearchSystemCall(char* FunctionLabel);
 
-static const size_t InitialTableSize;
+static const size_t InitialTableSize = 128;
 
 // asm listiing
 int main()
@@ -51,8 +54,6 @@ int main()
         fclose(IRFile);
         return -1;
     }
-    FILE* elf = fopen("gnome.o", "w+b");
-    assert(elf);
 
     TranslatorFunction_t ZeroFunction = {};
     ZeroFunction.Index = -1;
@@ -61,20 +62,22 @@ int main()
 
     TranslatorFunction_t CurrentFunction = ZeroFunction;
 
-    fprintf(elf, 
-                      "section .text\n\n"
-                      "global _start\n"
-                      "_start:\n"
-                      "\tcall main\n"
-                      "\tcall halt\n");
+    //fprintf(elf, 
+    //                  "section .text\n\n"
+    //                  "global _start\n"
+    //                  "_start:\n"
+    //                  "\tcall main\n"
+    //                  "\tcall halt\n");
 
     BackendLabelTable LabelTable = {};
     LabelTable.Labels = (BackendLabel*)calloc(sizeof(BackendLabel), InitialTableSize);
     assert(LabelTable.Labels);
     LabelTable.Capacity = InitialTableSize;
     size_t ip = 0;
-    char* elf = (char*)calloc(8192, 1); //FIXME -
+    char* elf = (char*)calloc(8192, 1); //FIXME
     assert(elf);
+
+    ip += EmitCall(0, elf, ip);
     for(size_t i = 0; i < IRFileSize; i++)
     {
         while(!isalpha(Buffer[i]) && i < IRFileSize)
@@ -166,6 +169,111 @@ int main()
         }
     }
 
+    ip = 0;
+
+    memset(elf, 0, ip);
+    char MainName[] = "main";
+    int MainLabelIndex = LabelTableSearch(&LabelTable, MainName);
+
+    ip += EmitCall(LabelTable.Labels[MainLabelIndex].Address, elf, ip);
+
+    for(size_t i = 0; i < IRFileSize; i++)
+    {
+        while(!isalpha(Buffer[i]) && i < IRFileSize)
+        {
+            i++;
+        }
+
+        int KeyWordCode = GetKeyWordCode(Buffer + i, &i); 
+
+        switch(KeyWordCode)
+        {
+            case IR_FUNCTION_BODY_INDEX:
+            {
+                i += TranslateFunctionBody(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            case IR_FUNCTION_CALL_INDEX:
+            {
+                i += TranslateFunctionCall(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            case IR_ASSIGNMENT_INDEX:
+            {
+                i += TranslateAssignment(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            case IR_RETURN_INDEX:
+            {
+                i += TranslateReturn(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            case IR_LABEL_INDEX:
+            {
+                i += TranslateLabel(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            case IR_CONDITIONAL_JUMP_INDEX:
+            {
+                i += TranslateConditionalJump(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            case IR_OPERATION_INDEX:
+            {
+                i += TranslateOperation(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            case IR_SYSTEM_FUNCTION_CALL_INDEX:
+            {
+                i += TranslateFunctionCall(Buffer + i, elf, &CurrentFunction, &ip, &LabelTable);
+                while(*(Buffer + i) != '\n' && i < IRFileSize)
+                {
+                    i++;
+                }
+                break;
+            }
+            default:
+            {
+                assert(0);
+                break;
+            }
+        }
+    }
+
+    if(CheckLabelTable(&LabelTable) == -1)
+    {
+        assert(0);
+    }
+
+    CreateElf(ip, (void*)elf);
     //fprintf(elf, "%s\n", SystemCallOut);
     //
     //fprintf(elf, "%s\n", SystemCallHalt);
@@ -176,6 +284,18 @@ int main()
     fclose(IRFile);
 
     //fclose(elf);
+}
+
+static int CheckLabelTable(BackendLabelTable* LabelTable)
+{
+    for(size_t i = 0; i < LabelTable->Free; i++)
+    {
+        if(LabelTable->Labels[i].Address == 0)
+        {
+            return -1;
+        }
+    }
+    return 0;
 }
 
 static size_t TranslateConditionalJump(char* Arguments, char* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction, size_t* ip, BackendLabelTable* LabelTable)
@@ -204,7 +324,7 @@ static size_t TranslateConditionalJump(char* Arguments, char* elf, __attribute((
     if(isdigit(Arguments[LocalBufferIndex])) // Normal jump TODO push imm
     {
         //fprintf(elf, "\tpush 1\n");
-        ip += EmitPush(1, elf, *ip);
+        (*ip) += EmitPush(1, elf, *ip);
     }
 
     while(Arguments[LocalBufferIndex] != ')')
@@ -219,14 +339,14 @@ static size_t TranslateConditionalJump(char* Arguments, char* elf, __attribute((
     //            "\tpop rdx ; condition\n"
     //            "\tcmp rdx, 0\n"
     //            "\tjne .%s\n", LabelName);
-    ip += EmitPop(emi_rdx, elf, *ip);
+    (*ip) += EmitPop(emi_rdx, elf, *ip);
     EmitterOperand Op1 = {};
     Op1.Type = emiRegisterOperand;
     Op1.Data.IntValue = emi_rdx;
     EmitterOperand Op2 = {};
     Op2.Type = emiIntValueOperand;
     Op2.Data.IntValue = 0;
-    ip += EmitCmp(Op1, Op2, elf, *ip);
+    (*ip) += EmitCmp(Op1, Op2, elf, *ip);
 
     int Shift = 0;
     int LabelIndex = LabelTableSearch(LabelTable, LabelName);
@@ -239,7 +359,8 @@ static size_t TranslateConditionalJump(char* Arguments, char* elf, __attribute((
         Shift = LabelTable->Labels[LabelIndex].Address;
     }
 
-    ip += EmitConditionalJump(emiNearJneOpCode, Shift, elf, *ip);
+    (*ip) += EmitConditionalJump(emiNearJneOpCode, Shift, elf, *ip);
+
 
     return LocalBufferIndex;
 }
@@ -253,7 +374,7 @@ static int LabelTableSearch(BackendLabelTable* LabelTable, char* Name)
     {
         if(strncmp(Name, LabelTable->Labels[i].Name, strlen(LabelTable->Labels[i].Name)) == 0)
         {
-            return i;
+            return (int)i;
         }
     }
     return -1;
@@ -271,11 +392,11 @@ static int LabelTableAppend(BackendLabelTable* LabelTable, char* Name, int Addre
             if(LabelTable->Labels[i].Address == 0)
             {
                 LabelTable->Labels[i].Address = Address;
-                return;
+                return (int)i;
             }
             else
             {
-                assert(0);
+                return (int)i;
             }
         }
     }
@@ -289,6 +410,8 @@ static int LabelTableAppend(BackendLabelTable* LabelTable, char* Name, int Addre
 
     LabelTable->Labels[LabelTable->Free].Address = Address;
     strncpy(LabelTable->Labels[LabelTable->Free].Name, Name, KEY_WORD_NAME_MAX);
+
+    LabelTable->Free++;
 
     return 0;
 }
@@ -316,16 +439,9 @@ static size_t TranslateLabel(char* Arguments, char* elf, __attribute((unused))Tr
     }
 
     //fprintf(elf, "\n.%s:\n", LabelName);
-    int LabelIndex = LabelTableSearch(LabelTable, LabelName);
-    if(LabelIndex == -1)
-    {
-        LabelTableAppend(LabelTable, LabelName, *ip);
-    }
-    else
-    {
-        fprintf(stderr, "scrubbish redefenition\n");
-        assert(0);
-    }
+
+    LabelTableAppend(LabelTable, LabelName, (int)*ip);
+
 
 
     LocalBufferIndex += 1;
@@ -333,7 +449,7 @@ static size_t TranslateLabel(char* Arguments, char* elf, __attribute((unused))Tr
     return LocalBufferIndex;
 }
 
-static size_t TranslateReturn(char* Arguments, char* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction, size_t* ip, BackendLabelTable* LabelTable)
+static size_t TranslateReturn(char* Arguments, char* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction, size_t* ip, __attribute((unused))BackendLabelTable* LabelTable)
 {
     assert(Arguments);
     assert(elf);
@@ -355,24 +471,25 @@ static size_t TranslateReturn(char* Arguments, char* elf, __attribute((unused))T
     //            "\tpop rbx\n"
     //            "\tadd rsp, %d\n"
     //            "\tret\n\n", (int)CurrentFunction->NumberOfLocalVariables * 8);
-    ip += EmitPop(emi_rax, elf, *ip);
-    ip += EmitPop(emi_rbp, elf, *ip);
-    ip += EmitPop(emi_r10, elf, *ip);
-    ip += EmitPop(emi_r9, elf, *ip);
-    ip += EmitPop(emi_r8, elf, *ip);
-    ip += EmitPop(emi_rsi, elf, *ip);
-    ip += EmitPop(emi_rdi, elf, *ip);
-    ip += EmitPop(emi_rdx, elf, *ip);
-    ip += EmitPop(emi_rcx, elf, *ip);
-    ip += EmitPop(emi_rbx, elf, *ip);
+    (*ip) += EmitPop(emi_rax, elf, *ip);
+    (*ip) += EmitPop(emi_rbp, elf, *ip);
+    (*ip) += EmitPop(emi_r10, elf, *ip);
+    (*ip) += EmitPop(emi_r9, elf, *ip);
+    (*ip) += EmitPop(emi_r8, elf, *ip);
+    (*ip) += EmitPop(emi_rsi, elf, *ip);
+    (*ip) += EmitPop(emi_rdi, elf, *ip);
+    (*ip) += EmitPop(emi_rdx, elf, *ip);
+    (*ip) += EmitPop(emi_rcx, elf, *ip);
+    (*ip) += EmitPop(emi_rbx, elf, *ip);
     EmitterOperand Op1 = {};
     Op1.Type = emiRegisterOperand;
     Op1.Data.IntValue = emi_rsp;
     EmitterOperand Op2 = {};
     Op2.Type = emiIntValueOperand;
     Op2.Data.IntValue = (int)CurrentFunction->NumberOfLocalVariables * 8;
-    ip += EmitAdd(Op1, Op2, elf, *ip);
-    
+    (*ip) += EmitAdd(Op1, Op2, elf, *ip);
+    (*ip) += EmitRet(elf, *ip);
+     
     return LocalBufferIndex;
 }
 
@@ -402,10 +519,12 @@ static size_t TranslateFunctionBody(char* Arguments, char* elf, TranslatorFuncti
     if(strncmp(FunctionLabel, "main", 4) == 0)
     {
        // fprintf(elf, "\n\nmain:\n"); // TODO
+       LabelTableAppend(LabelTable, FunctionLabel, (int)*ip);
     }
     else
     {
         //fprintf(elf, "\n\n%s:\n", FunctionLabel); // TODO
+        LabelTableAppend(LabelTable, FunctionLabel, (int)*ip);
     }
 
     LocalBufferIndex++;
@@ -432,8 +551,41 @@ static size_t TranslateFunctionBody(char* Arguments, char* elf, TranslatorFuncti
     //            "\tadd rcx, %d + 72\n"
     //            "\tmov rbp, rcx\n"
     //            , LocalVariablesNumber * 8, 8 * (LocalVariablesNumber - 1));
+    EmitterOperand Op1 = {};
+    Op1.Type = emiRegisterOperand;
+    Op1.Data.IntValue = emi_rsp;
+    EmitterOperand Op2 = {};
+    Op2.Type = emiIntValueOperand;
+    Op2.Data.IntValue = LocalVariablesNumber * 8;
+    (*ip) += EmitSub(Op1, Op2, elf, *ip);
 
-    
+    (*ip) += EmitPush(emi_rbx, elf, *ip);
+    (*ip) += EmitPush(emi_rcx, elf, *ip);
+    (*ip) += EmitPush(emi_rdx, elf, *ip);
+    (*ip) += EmitPush(emi_rdi, elf, *ip);
+    (*ip) += EmitPush(emi_rsi, elf, *ip);
+    (*ip) += EmitPush(emi_r8, elf, *ip);
+    (*ip) += EmitPush(emi_r9, elf, *ip);
+    (*ip) += EmitPush(emi_r10, elf, *ip);
+    (*ip) += EmitPush(emi_rbp, elf, *ip);
+
+    Op1 = {};
+    Op1.Type = emiRegisterOperand;
+    Op1.Data.IntValue = emi_rcx;
+
+    Op2 = {};
+    Op2.Type = emiRegisterOperand;
+    Op2.Data.IntValue = emi_rsp;
+    (*ip) += EmitMov(Op1, Op2, elf, *ip);
+
+    Op2 = {};
+    Op2.Type = emiIntValueOperand;
+    Op2.Data.IntValue = 72 + (LocalVariablesNumber - 1);
+    (*ip) += EmitAdd(Op1, Op2, elf, *ip);
+
+    Op1.Data.IntValue = emi_rbp;
+    Op2.Data.IntValue = emi_rcx;
+    (*ip) += EmitMov(Op1, Op2, elf, *ip);
 
     if(ArgumentsNumber > 0)
     {
@@ -441,7 +593,19 @@ static size_t TranslateFunctionBody(char* Arguments, char* elf, TranslatorFuncti
         {
             //fprintf(elf, 
             //            "\tmov rbx, [rbp + %d]\n"
-            //            "\tmov [rbp - %d], rbx\n\n", 8 + i * 8, ArgumentsNumber - i);
+            //            "\tmov [rbp - %d], rbx\n\n", 8 + i * 8, );
+            Op1.Data.IntValue = emi_rbx;
+            Op2.Type = emiMemoryOperand;
+            Op2.Data.IntValue = emi_rbp;
+            Op2.MemoryShift = 8 + i * 8;
+            (*ip) += EmitMov(Op1, Op2, elf, *ip);
+            Op1.Type = emiMemoryOperand;
+            Op1.Data.IntValue = emi_rbp;
+            Op1.MemoryShift = - (ArgumentsNumber - i);
+            Op2.Type = emiRegisterOperand;
+            Op2.MemoryShift = 0;
+            Op2.Data.IntValue = emi_rbx;
+            (*ip) += EmitMov(Op1, Op2, elf, *ip);
         }
 
     }
@@ -459,7 +623,7 @@ static size_t TranslateFunctionBody(char* Arguments, char* elf, TranslatorFuncti
     return LocalBufferIndex;
 }
 
-static size_t TranslateFunctionCall(char* Arguments, char* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction, size_t* ip)
+static size_t TranslateFunctionCall(char* Arguments, char* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction, size_t* ip, BackendLabelTable* LabelTable)
 {
     assert(Arguments);
     assert(elf);
@@ -540,17 +704,54 @@ static size_t TranslateFunctionCall(char* Arguments, char* elf, __attribute((unu
 
     if(ReturnFlag)
     {
-        fprintf(elf,
-                    "\tcall %s\n"
-                    "\tadd rsp, %d\n"
-                    "\tpush rax\n\n", FunctionLabel, 8 * ArgNumber);
-        LocalBufferIndex = NextUsedTmpIndex;
+        //fprintf(elf,
+        //            "\tcall %s\n"
+        //            "\tadd rsp, %d\n"
+        //            "\tpush rax\n\n", FunctionLabel, 8 * ArgNumber);
+        //LocalBufferIndex = NextUsedTmpIndex; // TODO CAAAAAAAAAAAAAAAAALLLLLLLLLLLLLLl
+        int LabelIndex = LabelTableSearch(LabelTable, FunctionLabel);
+        int Shift = 0;
+        if(LabelIndex == -1)
+        {
+            LabelTableAppend(LabelTable, FunctionLabel, 0);
+        }
+        else
+        {
+            Shift = LabelTable->Labels[LabelIndex].Address;
+        }
+        (*ip) += EmitCall(Shift, elf, *ip);
+        EmitterOperand Op1 = {};
+        Op1.Type = emiRegisterOperand;
+        Op1.Data.IntValue = emi_rsp;
+        EmitterOperand Op2 = {};
+        Op2.Type = emiIntValueOperand;
+        Op2.Data.IntValue = 8 * ArgNumber;
+        (*ip) += EmitAdd(Op1, Op2, elf, *ip);
+        (*ip) += EmitPush(emi_rax, elf, *ip);
     }
     else
     {
-        fprintf(elf,
-                    "\tcall %s\n"
-                    "\tadd rsp, %d\n\n", FunctionLabel, 8* ArgNumber);
+        //fprintf(elf,
+        //            "\tcall %s\n"
+        //            "\tadd rsp, %d\n\n", FunctionLabel, 8* ArgNumber);
+        int LabelIndex = LabelTableSearch(LabelTable, FunctionLabel);
+        int Shift = 0;
+        if(LabelIndex == -1)
+        {
+            LabelTableAppend(LabelTable, FunctionLabel, 0);
+        }
+        else
+        {
+            Shift = LabelTable->Labels[LabelIndex].Address;
+        }
+        (*ip) += EmitCall(Shift, elf, *ip);
+        EmitterOperand Op1 = {}; // CAAAAAAAAAAAAAAAAAAAAAAALLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+        Op1.Type = emiRegisterOperand;
+        Op1.Data.IntValue = emi_rsp;
+        EmitterOperand Op2 = {};
+        Op2.Type = emiIntValueOperand;
+        Op2.Data.IntValue = 8 * ArgNumber;
+        (*ip) += EmitAdd(Op1, Op2, elf, *ip);
     }
 
     return LocalBufferIndex;
@@ -592,7 +793,7 @@ static size_t GetNumberDigits(int Number)
     return Digits;
 }
 
-static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction, size_t* ip)
+static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unused))TranslatorFunction_t* CurrentFunction, size_t* ip, __attribute((unused))BackendLabelTable* LabelTable)
 {
     assert(Arguments);
     assert(elf);
@@ -630,9 +831,17 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
             int LocalVariableIndex = atoi(Arguments + LocalBufferIndex);
             LocalBufferIndex += GetNumberDigits(LocalVariableIndex);
 
-            fprintf(elf, 
-                        "\tmov r8, [rbp + 8 * %d]\n"
-                        "\tpush r8\n\n", LocalVariableIndex);
+            //fprintf(elf, 
+            //            "\tmov r8, [rbp + 8 * %d]\n"
+            //            "\tpush r8\n\n", LocalVariableIndex);
+            EmitterOperand Op1 = {};
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_r8;
+            EmitterOperand Op2 = {};
+            Op2.Type = emiMemoryOperand;
+            Op2.Data.IntValue = emi_rbp;
+            Op2.MemoryShift = 8 * LocalVariableIndex;
+            (*ip) += EmitMov(Op1, Op2, elf, *ip);
         }
         else if(isdigit(Arguments[LocalBufferIndex]))
         {
@@ -642,9 +851,16 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
             char BinaryFloatRepresentation[sizeof(double) * 8 + 2] = {};
             Get64ByteVariableBinaryString(&NumericalValue, BinaryFloatRepresentation);
 
-            fprintf(elf,
-                        "\tmov rax, %s\n"
-                        "\tpush rax\n\n", BinaryFloatRepresentation);
+            //fprintf(elf,
+            //            "\tmov rax, %s\n"
+            //            "\tpush rax\n\n", BinaryFloatRepresentation);
+            EmitterOperand Op1 = {};
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rax;
+            EmitterOperand Op2 = {};
+            Op2.Type = emiDoubleValueOperand;
+            Op2.Data.DoubleValue = NumericalValue;
+            (*ip) += EmitMov(Op1, Op2, elf, *ip);
         }
         else
         {
@@ -671,12 +887,31 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
             }
 
             LocalBufferIndex += 2;
-            fprintf(elf, 
-                "\tpop r8 ; assigning value to variable\n"
-                //"\tmov [rbp + 8 * %d], r8\n\n"
-                "\tmov rdi, rbp\n"
-                "\tadd rdi, 8 * %d\n"
-                "\tmov [rdi], r8\n\n", LocalVarIndex);
+            //fprintf(elf, 
+            //    "\tpop r8 ; assigning value to variable\n"
+            //    "\tmov rdi, rbp\n"
+            //    "\tadd rdi, 8 * %d\n"
+            //    "\tmov [rdi], r8\n\n", LocalVarIndex);
+            (*ip) += EmitPop(emi_r8, elf, *ip);
+            EmitterOperand Op1 = {};
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rdi;
+            EmitterOperand Op2 = {};
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_rbp;
+            (*ip) += EmitMov(Op1, Op2, elf, *ip);
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8 * LocalVarIndex;
+            (*ip) += EmitAdd(Op1, Op2, elf, *ip);
+
+            Op1.Type = emiMemoryOperand;
+            Op1.Data.IntValue = emi_rdi;
+            Op1.MemoryShift = 0;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_r8;
+            (*ip) += EmitMov(Op1, Op2, elf, *ip);
+
+
         }
         else if(Arguments[LocalBufferIndex] == 'a')
         {
@@ -707,7 +942,7 @@ static size_t TranslateAssignment(char* Arguments, char* elf, __attribute((unuse
     return LocalBufferIndex;
 }
 
-static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_t* CurrentFunction, size_t* ip)
+static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_t* CurrentFunction, size_t* ip, __attribute((unused))BackendLabelTable* LabelTable)
 {
     assert(Arguments);
     assert(elf);
@@ -728,110 +963,319 @@ static size_t TranslateOperation(char* Arguments, char* elf, TranslatorFunction_
 
     LocalBufferIndex += GetNumberDigits(OperationIndex);
 
-    fprintf(elf, 
-                "\tmovsd xmm0, [rsp] ; moving tmp variables from stack to xmm registers\n"
-                "\tadd rsp, 8\n"
-                "\tmovsd xmm1, [rsp]\n"
-                "\tadd rsp, 8\n");
+    //fprintf(elf, 
+    //            "\tmovsd xmm0, [rsp] ; moving tmp variables from stack to xmm registers\n"
+    //            "\tadd rsp, 8\n"
+    //            "\tmovsd xmm1, [rsp]\n"
+    //            "\tadd rsp, 8\n");
+    EmitterOperand Op1 = {};
+    EmitterOperand Op2 = {};
+    Op1.Type = emiRegisterOperand;
+    Op1.Data.IntValue = emi_xmm0;
+    Op2.Type = emiMemoryOperand;
+    Op2.Data.IntValue = emi_rsp;
+    Op2.MemoryShift = 0;
+    (*ip) += EmitMovsd(Op1, Op2, elf, *ip);
+    Op1.Data.IntValue = emi_rsp;
+    Op2.Type = emiIntValueOperand;
+    Op2.Data.IntValue = 8;
+    (*ip) += EmitAdd(Op1, Op2, elf, *ip);
+    Op1.Data.IntValue = emi_xmm1;
+    Op2.Type = emiMemoryOperand;
+    Op2.Data.IntValue = emi_rsp;
+    Op2.MemoryShift = 0;
+    (*ip) += EmitMovsd(Op1, Op2, elf, *ip);
+    Op1.Data.IntValue = emi_rsp;
+    Op2.Type = emiIntValueOperand;
+    Op2.Data.IntValue = 8;
+    (*ip) += EmitAdd(Op1, Op2, elf, *ip);
+
+
+    Op1.Type = emiRegisterOperand;
+    Op2.Type = emiRegisterOperand;
+    Op1.Data.IntValue = emi_xmm1;
+    Op2.Data.IntValue = emi_xmm0;
 
     switch(OperationIndex)
     {
         case IR_OP_TYPE_MUL:
         {
-            fprintf(elf, 
-                        "\tmulsd xmm1, xmm0 ; multiplication\n"
-                        "\tsub rsp, 8\n"
-                        "\tmovq [rsp], xmm1\n\n");
+            //fprintf(elf, 
+            //            "\tmulsd xmm1, xmm0 ; multiplication\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tmovq [rsp], xmm1\n\n");
+            (*ip) += EmitSSE2Ariphmetics(emiMulsdOpCode, Op1, Op2, elf, *ip);
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+            Op1.Type = emiMemoryOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op1.MemoryShift = 0;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
             break;
         }
         case IR_OP_TYPE_DIV:
         {
-            fprintf(elf, 
-                        "\tdivsd xmm1, xmm0 ; division\n"
-                        "\tsub rsp, 8\n"
-                        "\tmovq [rsp], xmm1\n\n");
+            //fprintf(elf, 
+            //            "\tdivsd xmm1, xmm0 ; division\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tmovq [rsp], xmm1\n\n");
+            (*ip) += EmitSSE2Ariphmetics(emiDivsdOpCode, Op1, Op2, elf, *ip);
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+            Op1.Type = emiMemoryOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op1.MemoryShift = 0;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+            break;
             break;
         }
         case IR_OP_TYPE_EQ:
         {
-            fprintf(elf, 
-                        "\tcmpsd xmm1, xmm0, 0 ; equality check\n"
-                        "\tmovq [rsp], xmm1\n"
-                        "\tsub rsp, 8\n"
-                        "\tpop r8\n"
-                        "\tshr r8, 31\n"
-                        "\tpush r8\n\n");
+            //fprintf(elf, 
+            //            "\tcmpsd xmm1, xmm0, 0 ; equality check\n"
+            //            "\tmovq [rsp], xmm1\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tpop r8\n"
+            //            "\tshr r8, 31\n"
+            //            "\tpush r8\n\n");
+            Op1.Type = emiMemoryOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op1.MemoryShift = 0;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+            Op1.Type = emiRegisterOperand;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+            (*ip) += EmitPop(emi_r8, elf, *ip);
+            
             break;
         }
         case IR_OP_TYPE_GREAT:
         {
-            fprintf(elf, 
-                        "\tcmpsd xmm1, xmm0, 6 ; greater check\n"
-                        "\tmovq [rsp], xmm1\n"
-                        "\tsub rsp, 8\n"
-                        "\tpop r8\n"
-                        "\tshr r8, 31\n"
-                        "\tpush r8\n\n");
+            //fprintf(elf, 
+            //            "\tcmpsd xmm1, xmm0, 6 ; greater check\n"
+            //            "\tmovq [rsp], xmm1\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tpop r8\n"
+            //            "\tshr r8, 31\n"
+            //            "\tpush r8\n\n");
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            (*ip) += EmitCmpsd(emiGreater, Op1, Op2, elf, *ip);
+
+            Op1.Data.IntValue = emi_rsp;
+            Op1.Type = emiMemoryOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPop(emi_r8, elf, *ip);
+
+            Op1.Data.IntValue = emi_r8;
+            Op2.Data.IntValue = 31;
+            (*ip) += EmitShr(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPush(emi_r8, elf, *ip);
             break;
         }
         case IR_OP_TYPE_GREATEQ:
         {
-            fprintf(elf, 
-                        "\tcmpsd xmm1, xmm0, 5 ; greater or equal check\n"
-                        "\tmovq [rsp], xmm1\n"
-                        "\tsub rsp, 8\n"
-                        "\tpop r8\n"
-                        "\tshr r8, 31\n"
-                        "\tpush r8\n\n");
+            //fprintf(elf, 
+            //            "\tcmpsd xmm1, xmm0, 5 ; greater or equal check\n"
+            //            "\tmovq [rsp], xmm1\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tpop r8\n"
+            //            "\tshr r8, 31\n"
+            //            "\tpush r8\n\n");
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            (*ip) += EmitCmpsd(emiGreaterOrEqual, Op1, Op2, elf, *ip);
+
+            Op1.Data.IntValue = emi_rsp;
+            Op1.Type = emiMemoryOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPop(emi_r8, elf, *ip);
+
+            Op1.Data.IntValue = emi_r8;
+            Op2.Data.IntValue = 31;
+            (*ip) += EmitShr(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPush(emi_r8, elf, *ip);
             break;
         }
         case IR_OP_TYPE_LESS:
         {
-            fprintf(elf, 
-                        "\tcmpsd xmm1, xmm0, 1 ; less check\n"
-                        "\tmovq [rsp], xmm1\n"
-                        "\tsub rsp, 8\n"
-                        "\tpop r8\n"
-                        "\tshr r8, 31\n"
-                        "\tpush r8\n\n");
+            //fprintf(elf, 
+            //            "\tcmpsd xmm1, xmm0, 1 ; less check\n"
+            //            "\tmovq [rsp], xmm1\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tpop r8\n"
+            //            "\tshr r8, 31\n"
+            //            "\tpush r8\n\n");
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            (*ip) += EmitCmpsd(emiLessThan, Op1, Op2, elf, *ip);
+
+            Op1.Data.IntValue = emi_rsp;
+            Op1.Type = emiMemoryOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPop(emi_r8, elf, *ip);
+
+            Op1.Data.IntValue = emi_r8;
+            Op2.Data.IntValue = 31;
+            (*ip) += EmitShr(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPush(emi_r8, elf, *ip);
             break;
         }
         case IR_OP_TYPE_LESSEQ:
         {
-            fprintf(elf, 
-                        "\tcmpsd xmm1, xmm0, 2 ; less or equal check\n"
-                        "\tmovq [rsp], xmm1\n"
-                        "\tsub rsp, 8\n"
-                        "\tpop r8\n"
-                        "\tshr r8, 31\n"
-                        "\tpush r8\n\n");
+            //fprintf(elf, 
+            //            "\tcmpsd xmm1, xmm0, 2 ; less or equal check\n"
+            //            "\tmovq [rsp], xmm1\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tpop r8\n"
+            //            "\tshr r8, 31\n"
+            //            "\tpush r8\n\n");
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            (*ip) += EmitCmpsd(emiLessThanOrEqual, Op1, Op2, elf, *ip);
+
+            Op1.Data.IntValue = emi_rsp;
+            Op1.Type = emiMemoryOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPop(emi_r8, elf, *ip);
+
+            Op1.Data.IntValue = emi_r8;
+            Op2.Data.IntValue = 31;
+            (*ip) += EmitShr(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPush(emi_r8, elf, *ip);
             break;
         }
         case IR_OP_TYPE_NEQ:
         {
-            fprintf(elf, 
-                        "\tcmpsd xmm1, xmm0, 4 ; not equal check\n"
-                        "\tmovq [rsp], xmm1\n"
-                        "\tsub rsp, 8\n"
-                        "\tpop r8\n"
-                        "\tshr r8, 31\n"
-                        "\tpush r8\n\n");
+            //fprintf(elf, 
+            //            "\tcmpsd xmm1, xmm0, 4 ; not equal check\n"
+            //            "\tmovq [rsp], xmm1\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tpop r8\n"
+            //            "\tshr r8, 31\n"
+            //            "\tpush r8\n\n");
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_xmm1;
+            (*ip) += EmitCmpsd(emiNotEqual, Op1, Op2, elf, *ip);
+
+            Op1.Data.IntValue = emi_rsp;
+            Op1.Type = emiMemoryOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPop(emi_r8, elf, *ip);
+
+            Op1.Data.IntValue = emi_r8;
+            Op2.Data.IntValue = 31;
+            (*ip) += EmitShr(Op1, Op2, elf, *ip);
+
+            (*ip) += EmitPush(emi_r8, elf, *ip);
             break;
         }
         case IR_OP_TYPE_SUB:
         {
-            fprintf(elf, 
-                        "\tsubsd xmm1, xmm0 ; substraction\n"
-                        "\tsub rsp, 8\n"
-                        "\tmovq [rsp], xmm1\n\n");
+            //fprintf(elf, 
+            //            "\tsubsd xmm1, xmm0 ; substraction\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tmovq [rsp], xmm1\n\n");
+            (*ip) += EmitSSE2Ariphmetics(emiSubsdOpCode, Op1, Op2, elf, *ip);
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+            Op1.Type = emiMemoryOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op1.MemoryShift = 0;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
             break;
         }
         case IR_OP_TYPE_SUM:
         {
-            fprintf(elf, 
-                        "\taddsd xmm1, xmm0 ; sum\n"
-                        "\tsub rsp, 8\n"
-                        "\tmovq [rsp], xmm1\n\n");
+            //fprintf(elf, 
+            //            "\taddsd xmm1, xmm0 ; sum\n"
+            //            "\tsub rsp, 8\n"
+            //            "\tmovq [rsp], xmm1\n\n");
+            (*ip) += EmitSSE2Ariphmetics(emiAddsdOpCode, Op1, Op2, elf, *ip);
+            Op1.Type = emiRegisterOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op2.Type = emiIntValueOperand;
+            Op2.Data.IntValue = 8;
+            (*ip) += EmitSub(Op1, Op2, elf, *ip);
+            Op1.Type = emiMemoryOperand;
+            Op1.Data.IntValue = emi_rsp;
+            Op1.MemoryShift = 0;
+            Op2.Type = emiRegisterOperand;
+            Op2.Data.IntValue = emi_xmm1;
+            (*ip) += EmitMovq(Op1, Op2, elf, *ip);
+            break;
             break;
         }
         default:
